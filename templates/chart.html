@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canyon Lake 30-Day History</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.2.1/dist/chartjs-plugin-annotation.min.js"></script>
+</head>
+<body>
+    <div class="chart-container">
+        <h1 style="font-size: 2em; margin-bottom: 20px;">Canyon Lake 30-Day History</h1>
+        
+        <div id="loading" class="loading">Loading historical data...</div>
+        
+        <div id="content" style="display: none;">
+            <div class="chart-wrapper">
+                <canvas id="chart"></canvas>
+            </div>
+            
+            <div class="stats" style="margin-top: 30px;">
+                <div class="stat-box">
+                    <div class="stat-label">30-Day High</div>
+                    <div class="stat-value" id="high">-</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">30-Day Low</div>
+                    <div class="stat-value" id="low">-</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">30-Day Average</div>
+                    <div class="stat-value" id="average">-</div>
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 30px;">
+                <a href="/" class="nav-link">Back to Current Status</a>
+            </div>
+        </div>
+        
+        <div id="error" class="error" style="display: none;">
+            Unable to load historical data. Please try again later.
+        </div>
+    </div>
+    
+    <script>
+        let chart = null;
+        
+        async function fetchHistoricalData() {
+            try {
+                const response = await fetch('/api/history');
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    displayChart(data.data);
+                } else {
+                    showError();
+                }
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                showError();
+            }
+        }
+        
+        function displayChart(data) {
+            // Hide loading, show content
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('content').style.display = 'block';
+            document.getElementById('error').style.display = 'none';
+            
+            // Calculate statistics
+            const percentages = data.map(d => d.percentage_full);
+            const elevations = data.map(d => d.elevation);
+            const high = Math.max(...percentages);
+            const low = Math.min(...percentages);
+            const average = percentages.reduce((a, b) => a + b, 0) / percentages.length;
+            
+            document.getElementById('high').textContent = high.toFixed(1) + '%';
+            document.getElementById('low').textContent = low.toFixed(1) + '%';
+            document.getElementById('average').textContent = average.toFixed(1) + '%';
+            
+            // Prepare chart data
+            const chartData = {
+                labels: data.map(d => new Date(d.date)),
+                datasets: [{
+                    label: 'Lake Level (%)',
+                    data: data.map(d => d.percentage_full),
+                    borderColor: '#5DADE2',
+                    backgroundColor: 'rgba(93, 173, 226, 0.1)',
+                    tension: 0.1,
+                    fill: true
+                }]
+            };
+            
+            // Chart configuration
+            const config = {
+                type: 'line',
+                data: chartData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    layout: {
+                        padding: 10
+                    },
+                    plugins: {
+                        title: {
+                            display: false
+                        },
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const index = context.dataIndex;
+                                    const percentage = context.parsed.y.toFixed(1);
+                                    const elevation = elevations[index].toFixed(2);
+                                    return [
+                                        `Level: ${percentage}%`,
+                                        `Elevation: ${elevation} ft`
+                                    ];
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'day',
+                                displayFormats: {
+                                    day: 'MMM d'
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Date'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Lake Level (%)'
+                            },
+                            min: 0,
+                            max: 110,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            }
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    }
+                }
+            };
+            
+            // Add reference lines
+            config.options.plugins.annotation = {
+                annotations: {
+                    line1: {
+                        type: 'line',
+                        yMin: 75,
+                        yMax: 75,
+                        borderColor: '#ff7043',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        label: {
+                            content: 'Low Threshold (75%)',
+                            enabled: true,
+                            position: 'start'
+                        }
+                    },
+                    line2: {
+                        type: 'line',
+                        yMin: 98,
+                        yMax: 98,
+                        borderColor: '#66bb6a',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        label: {
+                            content: 'Full (98%)',
+                            enabled: true,
+                            position: 'start'
+                        }
+                    }
+                }
+            };
+            
+            // Create chart
+            const ctx = document.getElementById('chart').getContext('2d');
+            if (chart) {
+                chart.destroy();
+            }
+            chart = new Chart(ctx, config);
+        }
+        
+        function showError() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('content').style.display = 'none';
+            document.getElementById('error').style.display = 'block';
+        }
+        
+        // Fetch data on load
+        fetchHistoricalData();
+    </script>
+</body>
+</html>

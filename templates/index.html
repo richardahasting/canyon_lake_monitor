@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canyon Lake Water Level Monitor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1 style="font-size: 24pt; margin-bottom: 10px;">Is Canyon Lake full yet?</h1>
+        <div id="answer" style="font-size: 30pt; font-weight: bold; text-align: center; margin-bottom: 30px;">-</div>
+        
+        <div id="loading" class="loading">Loading lake data...</div>
+        
+        <div id="content" style="display: none;">
+            <div class="lake-visual">
+                <div id="water" class="water">
+                    <span class="percentage" id="percentage">0%</span>
+                </div>
+            </div>
+            
+            <div id="status-message" class="status-message"></div>
+            
+            <div class="stats">
+                <div class="stat-box">
+                    <div class="stat-label">Current Elevation</div>
+                    <div class="stat-value" id="elevation">-</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Conservation Pool</div>
+                    <div class="stat-value" id="conservation">-</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Below Normal</div>
+                    <div class="stat-value" id="below-normal">-</div>
+                </div>
+            </div>
+            
+            <div class="last-updated" id="last-updated"></div>
+            
+            <div style="text-align: center;">
+                <a href="/chart" class="nav-link">View 30-Day History</a>
+            </div>
+        </div>
+        
+        <div id="error" class="error" style="display: none;">
+            Unable to load lake data. Please try again later.
+        </div>
+    </div>
+    
+    <script>
+        async function fetchLakeData() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    updateDisplay(data);
+                } else {
+                    showError();
+                }
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                showError();
+            }
+        }
+        
+        function updateDisplay(data) {
+            // Hide loading, show content
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('content').style.display = 'block';
+            document.getElementById('error').style.display = 'none';
+            
+            // Update answer based on percentage
+            const answer = document.getElementById('answer');
+            if (data.percentage_full >= 105) {
+                answer.textContent = 'Maybe a bit too much?';
+            } else if (data.percentage_full >= 98) {
+                answer.textContent = 'YES!';
+            } else {
+                answer.textContent = 'NOPE!';
+            }
+            
+            // Update water level visual
+            const water = document.getElementById('water');
+            water.style.height = data.percentage_full + '%';
+            water.className = 'water ' + data.status_category;
+            
+            // Update percentage
+            document.getElementById('percentage').textContent = data.percentage_full + '%';
+            
+            // Update stats
+            document.getElementById('elevation').textContent = data.elevation.toFixed(2) + ' ft';
+            document.getElementById('conservation').textContent = data.conservation_pool.toFixed(2) + ' ft';
+            document.getElementById('below-normal').textContent = data.feet_below_conservation.toFixed(2) + ' ft';
+            
+            // Update status message
+            const statusMessage = document.getElementById('status-message');
+            statusMessage.className = 'status-message ' + data.status_category;
+            
+            let message = '';
+            switch(data.status_category) {
+                case 'flood':
+                    message = 'WARNING: Lake is above flood stage!';
+                    break;
+                case 'full':
+                    message = 'Lake is at full conservation capacity';
+                    break;
+                case 'excellent':
+                    message = 'Lake levels are excellent';
+                    break;
+                case 'good':
+                    message = 'Lake levels are good';
+                    break;
+                case 'low':
+                    message = 'Lake levels are low - water conservation recommended';
+                    break;
+            }
+            statusMessage.textContent = message;
+            
+            // Update last updated time
+            const lastUpdated = new Date(data.timestamp);
+            document.getElementById('last-updated').textContent = 
+                'Last updated: ' + lastUpdated.toLocaleString();
+        }
+        
+        function showError() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('content').style.display = 'none';
+            document.getElementById('error').style.display = 'block';
+        }
+        
+        // Fetch data on load
+        fetchLakeData();
+        
+        // Refresh every 5 minutes
+        setInterval(fetchLakeData, 5 * 60 * 1000);
+    </script>
+</body>
+</html>

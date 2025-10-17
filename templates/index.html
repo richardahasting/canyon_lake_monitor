@@ -14,9 +14,24 @@
         <div id="loading" class="loading">Loading lake data...</div>
         
         <div id="content" style="display: none;">
-            <div class="lake-visual">
-                <div id="water" class="water">
-                    <span class="percentage" id="percentage">0%</span>
+            <div class="lake-container">
+                <div class="gauge">
+                    <div class="gauge-marker" style="bottom: 100%"><span>100%</span></div>
+                    <div class="gauge-marker" style="bottom: 90%"><span>90%</span></div>
+                    <div class="gauge-marker" style="bottom: 80%"><span>80%</span></div>
+                    <div class="gauge-marker" style="bottom: 70%"><span>70%</span></div>
+                    <div class="gauge-marker" style="bottom: 60%"><span>60%</span></div>
+                    <div class="gauge-marker" style="bottom: 50%"><span>50%</span></div>
+                    <div class="gauge-marker" style="bottom: 40%"><span>40%</span></div>
+                    <div class="gauge-marker" style="bottom: 30%"><span>30%</span></div>
+                    <div class="gauge-marker" style="bottom: 20%"><span>20%</span></div>
+                    <div class="gauge-marker" style="bottom: 10%"><span>10%</span></div>
+                    <div class="gauge-marker" style="bottom: 0%"><span>0%</span></div>
+                </div>
+                <div class="lake-visual">
+                    <div id="water" class="water">
+                        <span class="percentage" id="percentage">0%</span>
+                    </div>
                 </div>
             </div>
             
@@ -32,7 +47,7 @@
                     <div class="stat-value" id="conservation">-</div>
                 </div>
                 <div class="stat-box">
-                    <div class="stat-label">Below Normal</div>
+                    <div class="stat-label">Below Full</div>
                     <div class="stat-value" id="below-normal">-</div>
                 </div>
             </div>

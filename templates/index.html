@@ -51,6 +51,21 @@
                     <div class="stat-value" id="below-normal">-</div>
                 </div>
             </div>
+
+            <div class="stats" style="margin-top: 20px;">
+                <div class="stat-box">
+                    <div class="stat-label">Temperature</div>
+                    <div class="stat-value" id="temperature">-</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Moon Phase</div>
+                    <div class="stat-value" id="moon-phase">-</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Sunrise / Sunset</div>
+                    <div class="stat-value" id="sun-times" style="font-size: 0.9em;">-</div>
+                </div>
+            </div>
             
             <div class="last-updated" id="last-updated"></div>
             
@@ -72,7 +87,7 @@
             try {
                 const response = await fetch('/api/status');
                 const data = await response.json();
-                
+
                 if (data.status === 'success') {
                     updateDisplay(data);
                 } else {
@@ -81,6 +96,45 @@
             } catch (error) {
                 console.error('Error fetching data:', error);
                 showError();
+            }
+        }
+
+        async function fetchEnvironmentData() {
+            try {
+                const response = await fetch('/api/environment');
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    updateEnvironmentDisplay(data);
+                }
+            } catch (error) {
+                console.error('Error fetching environment data:', error);
+            }
+        }
+
+        function updateEnvironmentDisplay(data) {
+            // Update temperature
+            if (data.temperature !== null) {
+                document.getElementById('temperature').textContent = data.temperature + '°F';
+            } else {
+                document.getElementById('temperature').textContent = 'N/A';
+            }
+
+            // Update moon phase
+            if (data.moon_emoji && data.moon_phase) {
+                document.getElementById('moon-phase').textContent = data.moon_emoji + ' ' + data.moon_phase;
+            }
+
+            // Update sunrise/sunset
+            if (data.sunrise && data.sunset) {
+                document.getElementById('sun-times').textContent = data.sunrise + ' / ' + data.sunset;
+            }
+
+            // Apply theme based on day/night
+            if (data.is_daytime === false) {
+                document.body.classList.add('night-mode');
+            } else {
+                document.body.classList.remove('night-mode');
             }
         }
         
@@ -154,9 +208,13 @@
         
         // Fetch data on load
         fetchLakeData();
-        
+        fetchEnvironmentData();
+
         // Refresh every 5 minutes
-        setInterval(fetchLakeData, 5 * 60 * 1000);
+        setInterval(() => {
+            fetchLakeData();
+            fetchEnvironmentData();
+        }, 5 * 60 * 1000);
     </script>
 </body>
 </html>

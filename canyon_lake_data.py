@@ -1,7 +1,11 @@
 import requests
 import json
+import os
+import math
 from datetime import datetime, timedelta
 from typing import Dict, Optional, List
+from astral import LocationInfo
+from astral.sun import sun
 
 class CanyonLakeMonitor:
     def __init__(self):
@@ -12,6 +16,16 @@ class CanyonLakeMonitor:
         self.conservation_pool_elevation = 909.0
         self.flood_pool_elevation = 943.0
         self.conservation_capacity = 378781  # acre-feet
+
+        # Location information for Canyon Lake, TX
+        self.latitude = 29.8719
+        self.longitude = -98.2697
+        self.location = LocationInfo("Canyon Lake", "Texas", "America/Chicago",
+                                     self.latitude, self.longitude)
+
+        # OpenWeatherMap API (use environment variable for key)
+        self.weather_api_key = os.environ.get('OPENWEATHERMAP_API_KEY', '')
+        self.weather_url = "https://api.openweathermap.org/data/2.5/weather"
     
     def fetch_current_data(self) -> Optional[Dict]:
         """Fetch current water level data from USGS API"""
@@ -265,6 +279,131 @@ class CanyonLakeMonitor:
         except (requests.RequestException, KeyError, IndexError, ValueError) as e:
             print(f"Error fetching 12-hour flow data: {e}")
             return None
+
+    def fetch_weather(self) -> Optional[Dict]:
+        """Fetch current weather data from OpenWeatherMap API"""
+        if not self.weather_api_key:
+            return {
+                'temperature': None,
+                'description': 'API key not configured',
+                'feels_like': None
+            }
+
+        params = {
+            'lat': self.latitude,
+            'lon': self.longitude,
+            'appid': self.weather_api_key,
+            'units': 'imperial'  # Fahrenheit
+        }
+
+        try:
+            response = requests.get(self.weather_url, params=params)
+            response.raise_for_status()
+            data = response.json()
+
+            return {
+                'temperature': round(data['main']['temp'], 1),
+                'feels_like': round(data['main']['feels_like'], 1),
+                'description': data['weather'][0]['description'].title(),
+                'icon': data['weather'][0]['icon']
+            }
+        except requests.RequestException as e:
+            print(f"Error fetching weather data: {e}")
+            return {
+                'temperature': None,
+                'description': 'Unable to fetch weather',
+                'feels_like': None
+            }
+
+    def calculate_moon_phase(self, date: Optional[datetime] = None) -> Dict:
+        """Calculate moon phase for given date (or today)"""
+        if date is None:
+            date = datetime.now()
+
+        # Known new moon reference point
+        known_new_moon = datetime(2000, 1, 6, 18, 14)
+        lunar_cycle = 29.53058867  # days
+
+        # Calculate days since known new moon
+        days_since = (date - known_new_moon).total_seconds() / 86400
+        phase_position = (days_since % lunar_cycle) / lunar_cycle
+
+        # Determine phase name and emoji
+        if phase_position < 0.0625:
+            phase_name = "New Moon"
+            emoji = "🌑"
+        elif phase_position < 0.1875:
+            phase_name = "Waxing Crescent"
+            emoji = "🌒"
+        elif phase_position < 0.3125:
+            phase_name = "First Quarter"
+            emoji = "🌓"
+        elif phase_position < 0.4375:
+            phase_name = "Waxing Gibbous"
+            emoji = "🌔"
+        elif phase_position < 0.5625:
+            phase_name = "Full Moon"
+            emoji = "🌕"
+        elif phase_position < 0.6875:
+            phase_name = "Waning Gibbous"
+            emoji = "🌖"
+        elif phase_position < 0.8125:
+            phase_name = "Last Quarter"
+            emoji = "🌗"
+        elif phase_position < 0.9375:
+            phase_name = "Waning Crescent"
+            emoji = "🌘"
+        else:
+            phase_name = "New Moon"
+            emoji = "🌑"
+
+        return {
+            'phase_name': phase_name,
+            'emoji': emoji,
+            'illumination': round(abs(0.5 - phase_position) * 200, 1)
+        }
+
+    def is_daytime(self) -> Dict:
+        """Determine if it's currently daytime based on sun position"""
+        try:
+            now = datetime.now(self.location.tzinfo)
+            sun_times = sun(self.location.observer, date=now.date(), tzinfo=self.location.tzinfo)
+
+            is_day = sun_times['sunrise'] <= now <= sun_times['sunset']
+
+            return {
+                'is_daytime': is_day,
+                'sunrise': sun_times['sunrise'].strftime('%I:%M %p'),
+                'sunset': sun_times['sunset'].strftime('%I:%M %p')
+            }
+        except Exception as e:
+            print(f"Error calculating day/night: {e}")
+            # Fallback to simple time check (6 AM - 8 PM)
+            hour = datetime.now().hour
+            return {
+                'is_daytime': 6 <= hour <= 20,
+                'sunrise': '6:00 AM',
+                'sunset': '8:00 PM'
+            }
+
+    def get_environment_data(self) -> Dict:
+        """Get all environmental data: weather, moon phase, and day/night status"""
+        weather = self.fetch_weather()
+        moon = self.calculate_moon_phase()
+        daylight = self.is_daytime()
+
+        return {
+            'status': 'success',
+            'temperature': weather.get('temperature'),
+            'weather_description': weather.get('description'),
+            'feels_like': weather.get('feels_like'),
+            'moon_phase': moon['phase_name'],
+            'moon_emoji': moon['emoji'],
+            'moon_illumination': moon['illumination'],
+            'is_daytime': daylight['is_daytime'],
+            'sunrise': daylight['sunrise'],
+            'sunset': daylight['sunset']
+        }
 
 if __name__ == "__main__":
     monitor = CanyonLakeMonitor()

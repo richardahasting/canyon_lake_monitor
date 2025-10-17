@@ -246,3 +246,121 @@ h1 {
     height: 400px;
     margin: 20px 0;
 }
+
+/* Night Mode / Dusk Theme */
+body.night-mode {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    transition: background 1s ease-in-out;
+}
+
+body.night-mode .container {
+    background: #1e1e2e;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+
+body.night-mode h1 {
+    color: #e8e8f0;
+}
+
+body.night-mode #answer {
+    color: #ffd700;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+}
+
+body.night-mode .lake-visual {
+    background: #2a2a3a;
+}
+
+body.night-mode .water {
+    background: linear-gradient(180deg, #1e3a5f 0%, #0f2942 100%);
+}
+
+body.night-mode .percentage {
+    color: #b8c5d6;
+}
+
+body.night-mode .stat-box {
+    background: #2a2a3a;
+    border: 1px solid #3a3a4a;
+}
+
+body.night-mode .stat-label {
+    color: #a8a8b8;
+}
+
+body.night-mode .stat-value {
+    color: #e8e8f0;
+}
+
+body.night-mode .status-message {
+    background: #2a2a3a;
+    color: #e8e8f0;
+    border: 1px solid #3a3a4a;
+}
+
+body.night-mode .status-message.low {
+    background: #3a1f1f;
+    color: #ff8a80;
+    border-color: #5a2f2f;
+}
+
+body.night-mode .status-message.good {
+    background: #1f3a1f;
+    color: #81c784;
+    border-color: #2f5a2f;
+}
+
+body.night-mode .status-message.excellent {
+    background: #1f2a3a;
+    color: #64b5f6;
+    border-color: #2f3a5a;
+}
+
+body.night-mode .status-message.flood {
+    background: #3a1f1f;
+    color: #ff5252;
+    border-color: #5a2f2f;
+}
+
+body.night-mode .status-message.critical {
+    background: #3a1f1f;
+    color: #ff8a80;
+    border-color: #5a2f2f;
+}
+
+body.night-mode .last-updated {
+    color: #a8a8b8;
+}
+
+body.night-mode .loading {
+    color: #a8a8b8;
+}
+
+body.night-mode .error {
+    background: #3a1f1f;
+    color: #ff8a80;
+    border: 1px solid #5a2f2f;
+}
+
+body.night-mode .nav-link {
+    background: #0f3460;
+    color: #e8e8f0;
+}
+
+body.night-mode .nav-link:hover {
+    background: #16213e;
+}
+
+body.night-mode .gauge-marker span {
+    color: #a8a8b8;
+}
+
+body.night-mode .gauge-marker::before {
+    background: #666;
+}
+
+/* Night mode for chart page */
+body.night-mode .chart-container {
+    background: #1e1e2e;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}

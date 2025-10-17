@@ -181,6 +181,12 @@ def get_stats():
         'stats': hits_data
     })
 
+@app.route('/api/environment')
+def get_environment():
+    """Get environmental data: weather, moon phase, and day/night status"""
+    env_data = monitor.get_environment_data()
+    return jsonify(env_data)
+
 if __name__ == '__main__':
     # Create templates directory if it doesn't exist
     os.makedirs('templates', exist_ok=True)

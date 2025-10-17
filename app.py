@@ -15,7 +15,7 @@ hits_lock = threading.Lock()
 
 # Analytics access control
 ALLOWED_ANALYTICS_IPS = [
-    '69.166.55.114',
+    '69.166.66.114',
     '127.0.0.1',
     '192.168.0.0/24'  # 192.168.0.* range
 ]

@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Site Analytics - Canyon Lake Monitor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="chart-container">
+        <h1 style="font-size: 2em; margin-bottom: 20px;">Site Analytics</h1>
+
+        <div id="loading" class="loading">Loading analytics data...</div>
+
+        <div id="content" style="display: none;">
+            <!-- Summary Stats -->
+            <div class="stats" style="margin-bottom: 30px;">
+                <div class="stat-box">
+                    <div class="stat-label">Total Hits</div>
+                    <div class="stat-value" id="total-hits">-</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Unique Visitors</div>
+                    <div class="stat-value" id="unique-visitors">-</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">First Visit</div>
+                    <div class="stat-value" id="first-visit" style="font-size: 1em;">-</div>
+                </div>
+            </div>
+
+            <!-- Hits by Route Chart -->
+            <div style="background: white; border-radius: 15px; padding: 20px; margin-bottom: 30px;">
+                <h2 style="font-size: 1.5em; margin-bottom: 15px;">Hits by Page</h2>
+                <div style="height: 300px;">
+                    <canvas id="route-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- Recent Visits Table -->
+            <div style="background: white; border-radius: 15px; padding: 20px; margin-bottom: 30px;">
+                <h2 style="font-size: 1.5em; margin-bottom: 15px;">Recent Visits (Last 20)</h2>
+                <div style="overflow-x: auto;">
+                    <table id="recent-visits" style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid #ddd;">
+                                <th style="padding: 10px; text-align: left;">Timestamp</th>
+                                <th style="padding: 10px; text-align: left;">Page</th>
+                                <th style="padding: 10px; text-align: left;">IP Address</th>
+                            </tr>
+                        </thead>
+                        <tbody id="visits-tbody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Top Visitors -->
+            <div style="background: white; border-radius: 15px; padding: 20px; margin-bottom: 30px;">
+                <h2 style="font-size: 1.5em; margin-bottom: 15px;">Top Visitors</h2>
+                <div id="top-visitors"></div>
+            </div>
+
+            <div style="text-align: center; margin-top: 30px;">
+                <a href="/" class="nav-link">Back to Current Status</a>
+                <a href="/chart" class="nav-link" style="margin-left: 10px;">View Lake History</a>
+            </div>
+        </div>
+
+        <div id="error" class="error" style="display: none;">
+            Unable to load analytics data. Please try again later.
+        </div>
+    </div>
+
+    <script>
+        let routeChart = null;
+
+        async function fetchAnalyticsData() {
+            try {
+                const response = await fetch('/api/stats');
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    displayAnalytics(data.stats);
+                } else {
+                    showError();
+                }
+            } catch (error) {
+                console.error('Error fetching analytics:', error);
+                showError();
+            }
+        }
+
+        function displayAnalytics(stats) {
+            // Hide loading, show content
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('content').style.display = 'block';
+            document.getElementById('error').style.display = 'none';
+
+            // Update summary stats
+            document.getElementById('total-hits').textContent = stats.total.toLocaleString();
+            document.getElementById('unique-visitors').textContent = stats.unique_ips.length.toLocaleString();
+
+            if (stats.first_hit) {
+                const firstDate = new Date(stats.first_hit);
+                document.getElementById('first-visit').textContent = firstDate.toLocaleDateString();
+            }
+
+            // Display route chart
+            displayRouteChart(stats.routes);
+
+            // Display recent visits
+            displayRecentVisits(stats.recent_hits || []);
+
+            // Display top visitors
+            displayTopVisitors(stats.recent_hits || []);
+        }
+
+        function displayRouteChart(routes) {
+            const labels = Object.keys(routes).map(route => {
+                if (route === '/') return 'Home Page';
+                if (route === '/chart') return 'Lake History';
+                return route;
+            });
+            const data = Object.values(routes);
+            const colors = [
+                'rgba(93, 173, 226, 0.8)',
+                'rgba(72, 201, 176, 0.8)',
+                'rgba(255, 159, 64, 0.8)',
+                'rgba(255, 99, 132, 0.8)'
+            ];
+
+            const chartData = {
+                labels: labels,
+                datasets: [{
+                    label: 'Page Hits',
+                    data: data,
+                    backgroundColor: colors.slice(0, labels.length),
+                    borderColor: colors.slice(0, labels.length).map(c => c.replace('0.8', '1')),
+                    borderWidth: 1
+                }]
+            };
+
+            const config = {
+                type: 'bar',
+                data: chartData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return 'Hits: ' + context.parsed.y.toLocaleString();
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0
+                            }
+                        }
+                    }
+                }
+            };
+
+            const ctx = document.getElementById('route-chart').getContext('2d');
+            if (routeChart) {
+                routeChart.destroy();
+            }
+            routeChart = new Chart(ctx, config);
+        }
+
+        function displayRecentVisits(recentHits) {
+            const tbody = document.getElementById('visits-tbody');
+            tbody.innerHTML = '';
+
+            // Show last 20 hits in reverse order (most recent first)
+            const hitsToShow = recentHits.slice(-20).reverse();
+
+            hitsToShow.forEach(hit => {
+                const row = document.createElement('tr');
+                row.style.borderBottom = '1px solid #eee';
+
+                const timestamp = new Date(hit.timestamp);
+                const formattedTime = timestamp.toLocaleString();
+
+                const pageName = hit.route === '/' ? 'Home' :
+                                hit.route === '/chart' ? 'Lake History' : hit.route;
+
+                row.innerHTML = `
+                    <td style="padding: 10px;">${formattedTime}</td>
+                    <td style="padding: 10px;">${pageName}</td>
+                    <td style="padding: 10px; font-family: monospace;">${hit.ip}</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            if (hitsToShow.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" style="padding: 20px; text-align: center; color: #999;">No visit data available</td></tr>';
+            }
+        }
+
+        function displayTopVisitors(recentHits) {
+            const container = document.getElementById('top-visitors');
+
+            // Count hits by IP
+            const ipCounts = {};
+            recentHits.forEach(hit => {
+                ipCounts[hit.ip] = (ipCounts[hit.ip] || 0) + 1;
+            });
+
+            // Sort by count
+            const sorted = Object.entries(ipCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10);
+
+            if (sorted.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #999;">No visitor data available</p>';
+                return;
+            }
+
+            let html = '<div style="display: grid; gap: 10px;">';
+            sorted.forEach(([ip, count]) => {
+                const percentage = (count / recentHits.length * 100).toFixed(1);
+                html += `
+                    <div style="display: flex; align-items: center; padding: 10px; background: #f8f9fa; border-radius: 8px;">
+                        <div style="flex: 1; font-family: monospace;">${ip}</div>
+                        <div style="font-weight: bold; margin: 0 20px;">${count} hits</div>
+                        <div style="color: #666;">${percentage}%</div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function showError() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('content').style.display = 'none';
+            document.getElementById('error').style.display = 'block';
+        }
+
+        // Fetch data on load
+        fetchAnalyticsData();
+
+        // Auto-refresh every 5 minutes
+        setInterval(fetchAnalyticsData, 5 * 60 * 1000);
+    </script>
+</body>
+</html>

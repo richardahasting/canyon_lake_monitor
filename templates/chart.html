@@ -38,6 +38,7 @@
             
             <div style="text-align: center; margin-top: 30px;">
                 <a href="/" class="nav-link">Back to Current Status</a>
+                <a href="/analytics" class="nav-link" style="margin-left: 10px;">View Site Analytics</a>
             </div>
         </div>
         
@@ -51,11 +52,17 @@
         
         async function fetchHistoricalData() {
             try {
-                const response = await fetch('/api/history');
-                const data = await response.json();
+                // Fetch both lake data and 12-hour flow data
+                const [lakeResponse, flowResponse] = await Promise.all([
+                    fetch('/api/history'),
+                    fetch('/api/flow-12hr')
+                ]);
                 
-                if (data.status === 'success') {
-                    displayChart(data.data);
+                const lakeData = await lakeResponse.json();
+                const flowData = await flowResponse.json();
+                
+                if (lakeData.status === 'success' && flowData.status === 'success') {
+                    displayChart(lakeData.data, flowData.data);
                 } else {
                     showError();
                 }
@@ -65,15 +72,15 @@
             }
         }
         
-        function displayChart(data) {
+        function displayChart(lakeData, flowData) {
             // Hide loading, show content
             document.getElementById('loading').style.display = 'none';
             document.getElementById('content').style.display = 'block';
             document.getElementById('error').style.display = 'none';
             
             // Calculate statistics
-            const percentages = data.map(d => d.percentage_full);
-            const elevations = data.map(d => d.elevation);
+            const percentages = lakeData.map(d => d.percentage_full);
+            const elevations = lakeData.map(d => d.elevation);
             const high = Math.max(...percentages);
             const low = Math.min(...percentages);
             const average = percentages.reduce((a, b) => a + b, 0) / percentages.length;
@@ -84,14 +91,31 @@
             
             // Prepare chart data
             const chartData = {
-                labels: data.map(d => new Date(d.date)),
+                labels: flowData.map(d => new Date(d.timestamp)),
                 datasets: [{
                     label: 'Lake Level (%)',
-                    data: data.map(d => d.percentage_full),
+                    data: lakeData.map(d => ({
+                        x: new Date(d.date),
+                        y: d.percentage_full
+                    })),
                     borderColor: '#5DADE2',
                     backgroundColor: 'rgba(93, 173, 226, 0.1)',
                     tension: 0.1,
-                    fill: true
+                    fill: true,
+                    yAxisID: 'y',
+                    spanGaps: true
+                }, {
+                    label: 'River Flow - 12hr avg (cfs)',
+                    data: flowData.map(d => ({
+                        x: new Date(d.timestamp),
+                        y: d.flow
+                    })),
+                    borderColor: '#48C9B0',
+                    backgroundColor: 'rgba(72, 201, 176, 0.1)',
+                    tension: 0.1,
+                    fill: true,
+                    yAxisID: 'y1',
+                    spanGaps: true
                 }]
             };
             
@@ -110,18 +134,37 @@
                             display: false
                         },
                         legend: {
-                            display: false
+                            display: true,
+                            position: 'top'
                         },
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
                                     const index = context.dataIndex;
-                                    const percentage = context.parsed.y.toFixed(1);
-                                    const elevation = elevations[index].toFixed(2);
-                                    return [
-                                        `Level: ${percentage}%`,
-                                        `Elevation: ${elevation} ft`
-                                    ];
+                                    const datasetIndex = context.datasetIndex;
+                                    
+                                    if (datasetIndex === 0) {
+                                        const percentage = context.parsed.y.toFixed(1);
+                                        // Find matching elevation
+                                        const lakeItem = lakeData.find(d => 
+                                            Math.abs(new Date(d.date) - new Date(context.parsed.x)) < 86400000
+                                        );
+                                        if (lakeItem) {
+                                            return [
+                                                `Level: ${percentage}%`,
+                                                `Elevation: ${lakeItem.elevation.toFixed(2)} ft`
+                                            ];
+                                        }
+                                        return `Level: ${percentage}%`;
+                                    } else {
+                                        const flow = context.parsed.y;
+                                        const flowItem = flowData.find(d => d.timestamp === context.raw.x.toISOString());
+                                        const period = flowItem ? flowItem.period : '';
+                                        return [
+                                            `Flow: ${flow.toLocaleString()} cfs`,
+                                            `Period: ${period}`
+                                        ];
+                                    }
                                 }
                             }
                         }
@@ -141,6 +184,9 @@
                             }
                         },
                         y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
                             title: {
                                 display: true,
                                 text: 'Lake Level (%)'
@@ -150,6 +196,23 @@
                             ticks: {
                                 callback: function(value) {
                                     return value + '%';
+                                }
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'River Flow (cfs)'
+                            },
+                            grid: {
+                                drawOnChartArea: false
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toLocaleString() + ' cfs';
                                 }
                             }
                         }

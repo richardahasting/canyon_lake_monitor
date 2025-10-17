@@ -90,6 +90,10 @@ def index():
 def chart():
     return render_template('chart.html')
 
+@app.route('/analytics')
+def analytics():
+    return render_template('analytics.html')
+
 @app.route('/api/status')
 def get_status():
     status = monitor.get_lake_status()

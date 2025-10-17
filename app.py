@@ -109,11 +109,21 @@ def track_hits():
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    # Check if current IP can access analytics
+    ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
+    if ip_address and ',' in ip_address:
+        ip_address = ip_address.split(',')[0].strip()
+    show_analytics = is_ip_allowed(ip_address)
+    return render_template('index.html', show_analytics=show_analytics)
 
 @app.route('/chart')
 def chart():
-    return render_template('chart.html')
+    # Check if current IP can access analytics
+    ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
+    if ip_address and ',' in ip_address:
+        ip_address = ip_address.split(',')[0].strip()
+    show_analytics = is_ip_allowed(ip_address)
+    return render_template('chart.html', show_analytics=show_analytics)
 
 @app.route('/analytics')
 def analytics():

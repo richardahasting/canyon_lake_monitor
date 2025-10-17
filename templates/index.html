@@ -120,16 +120,19 @@
                     message = 'WARNING: Lake is above flood stage!';
                     break;
                 case 'full':
-                    message = 'Lake is at full conservation capacity';
+                    message = 'Lake is at full conservation capacity.';
                     break;
                 case 'excellent':
-                    message = 'Lake levels are excellent';
+                    message = 'Lake levels are excellent!';
                     break;
                 case 'good':
-                    message = 'Lake levels are good';
+                    message = 'Lake levels are good.';
                     break;
                 case 'low':
-                    message = 'Lake levels are low - water conservation recommended';
+                    message = 'Lake levels are low. Please conserve water.';
+                    break;
+                case 'critical':
+                    message = 'Lake levels are critically low. Please conserve water.';
                     break;
             }
             statusMessage.textContent = message;

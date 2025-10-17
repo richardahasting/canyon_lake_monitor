@@ -105,6 +105,10 @@ h1 {
     background: linear-gradient(180deg, #87CEEB 0%, #5DADE2 100%);
 }
 
+.water.critical {
+    background: linear-gradient(180deg, #87CEEB 0%, #5DADE2 100%);
+}
+
 .percentage {
     color: white;
     font-size: 3em;
@@ -165,6 +169,11 @@ h1 {
 .status-message.flood {
     background: #ffebee;
     color: #b71c1c;
+}
+
+.status-message.critical {
+    background: #ffebee;
+    color: #c62828;
 }
 
 .loading {

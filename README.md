@@ -2,6 +2,8 @@
 
 A Python and HTML application that displays the current water level of Canyon Lake in Texas.
 
+> **Note**: This Flask development server is used for both development and production deployment.
+
 ## Features
 
 - Real-time water level data from USGS

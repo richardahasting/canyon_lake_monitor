@@ -18,11 +18,19 @@ def load_hits():
         with hits_lock:
             if os.path.exists(HITS_FILE):
                 with open(HITS_FILE, 'r') as f:
-                    return json.load(f)
-            return {'total': 0, 'routes': {}, 'first_hit': None, 'last_hit': None}
+                    data = json.load(f)
+                    # Ensure new fields exist for backward compatibility
+                    if 'unique_ips' not in data:
+                        data['unique_ips'] = []
+                    if 'recent_hits' not in data:
+                        data['recent_hits'] = []
+                    return data
+            return {'total': 0, 'routes': {}, 'first_hit': None, 'last_hit': None,
+                    'unique_ips': [], 'recent_hits': []}
     except Exception as e:
         print(f"Error loading hits: {e}")
-        return {'total': 0, 'routes': {}, 'first_hit': None, 'last_hit': None}
+        return {'total': 0, 'routes': {}, 'first_hit': None, 'last_hit': None,
+                'unique_ips': [], 'recent_hits': []}
 
 def save_hits(hits_data):
     """Save hit counter to file"""
@@ -33,8 +41,8 @@ def save_hits(hits_data):
     except Exception as e:
         print(f"Error saving hits: {e}")
 
-def increment_hit_counter(route):
-    """Increment hit counter for a specific route"""
+def increment_hit_counter(route, ip_address):
+    """Increment hit counter for a specific route and track IP"""
     hits_data = load_hits()
     hits_data['total'] = hits_data.get('total', 0) + 1
 
@@ -47,13 +55,32 @@ def increment_hit_counter(route):
         hits_data['first_hit'] = now
     hits_data['last_hit'] = now
 
+    # Track unique IPs
+    if ip_address not in hits_data['unique_ips']:
+        hits_data['unique_ips'].append(ip_address)
+
+    # Add to recent hits (keep last 100)
+    hits_data['recent_hits'].append({
+        'timestamp': now,
+        'route': route,
+        'ip': ip_address
+    })
+    # Keep only the last 100 hits
+    if len(hits_data['recent_hits']) > 100:
+        hits_data['recent_hits'] = hits_data['recent_hits'][-100:]
+
     save_hits(hits_data)
 
 @app.before_request
 def track_hits():
     """Track page hits for main routes"""
     if request.endpoint in ['index', 'chart']:
-        increment_hit_counter(request.path)
+        # Get IP address, handle proxy forwarding
+        ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
+        if ip_address and ',' in ip_address:
+            # X-Forwarded-For can contain multiple IPs, take the first one
+            ip_address = ip_address.split(',')[0].strip()
+        increment_hit_counter(request.path, ip_address)
 
 @app.route('/')
 def index():

@@ -23,9 +23,8 @@ class CanyonLakeMonitor:
         self.location = LocationInfo("Canyon Lake", "Texas", "America/Chicago",
                                      self.latitude, self.longitude)
 
-        # OpenWeatherMap API (use environment variable for key)
-        self.weather_api_key = os.environ.get('OPENWEATHERMAP_API_KEY', '')
-        self.weather_url = "https://api.openweathermap.org/data/2.5/weather"
+        # Weather.gov API (National Weather Service - no API key needed)
+        self.weather_base_url = "https://api.weather.gov"
     
     def fetch_current_data(self) -> Optional[Dict]:
         """Fetch current water level data from USGS API"""
@@ -281,34 +280,60 @@ class CanyonLakeMonitor:
             return None
 
     def fetch_weather(self) -> Optional[Dict]:
-        """Fetch current weather data from OpenWeatherMap API"""
-        if not self.weather_api_key:
-            return {
-                'temperature': None,
-                'description': 'API key not configured',
-                'feels_like': None
-            }
-
-        params = {
-            'lat': self.latitude,
-            'lon': self.longitude,
-            'appid': self.weather_api_key,
-            'units': 'imperial'  # Fahrenheit
-        }
-
+        """Fetch current weather data from Weather.gov API (National Weather Service)"""
         try:
-            response = requests.get(self.weather_url, params=params)
-            response.raise_for_status()
-            data = response.json()
+            # First, get the grid point data for our location
+            points_url = f"{self.weather_base_url}/points/{self.latitude},{self.longitude}"
+            headers = {
+                'User-Agent': '(Canyon Lake Monitor, contact@example.com)',
+                'Accept': 'application/json'
+            }
+
+            points_response = requests.get(points_url, headers=headers, timeout=10)
+            points_response.raise_for_status()
+            points_data = points_response.json()
+
+            # Get the observation stations URL
+            observation_stations_url = points_data['properties']['observationStations']
+
+            # Fetch the nearest observation station
+            stations_response = requests.get(observation_stations_url, headers=headers, timeout=10)
+            stations_response.raise_for_status()
+            stations_data = stations_response.json()
+
+            if not stations_data['features']:
+                raise ValueError("No observation stations found")
+
+            # Get the latest observation from the nearest station
+            station_id = stations_data['features'][0]['properties']['stationIdentifier']
+            observation_url = f"{self.weather_base_url}/stations/{station_id}/observations/latest"
+
+            obs_response = requests.get(observation_url, headers=headers, timeout=10)
+            obs_response.raise_for_status()
+            obs_data = obs_response.json()
+
+            # Extract temperature (convert from Celsius to Fahrenheit)
+            temp_c = obs_data['properties']['temperature']['value']
+            if temp_c is not None:
+                temp_f = (temp_c * 9/5) + 32
+                temperature = round(temp_f, 1)
+            else:
+                temperature = None
+
+            # Get weather description
+            description = obs_data['properties']['textDescription']
+            if not description:
+                description = 'Clear'
 
             return {
-                'temperature': round(data['main']['temp'], 1),
-                'feels_like': round(data['main']['feels_like'], 1),
-                'description': data['weather'][0]['description'].title(),
-                'icon': data['weather'][0]['icon']
+                'temperature': temperature,
+                'feels_like': None,  # Weather.gov doesn't provide "feels like"
+                'description': description,
+                'station': station_id
             }
-        except requests.RequestException as e:
-            print(f"Error fetching weather data: {e}")
+
+        except (requests.RequestException, KeyError, ValueError, TypeError) as e:
+            print(f"Error fetching weather data from weather.gov: {e}")
             return {
                 'temperature': None,
                 'description': 'Unable to fetch weather',

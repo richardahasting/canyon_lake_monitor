@@ -1,9 +1,10 @@
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, abort
 from canyon_lake_data import CanyonLakeMonitor
 import os
 import json
 import threading
 from datetime import datetime
+import ipaddress
 
 app = Flask(__name__)
 monitor = CanyonLakeMonitor()
@@ -11,6 +12,30 @@ monitor = CanyonLakeMonitor()
 # Hit counter configuration
 HITS_FILE = 'hits.json'
 hits_lock = threading.Lock()
+
+# Analytics access control
+ALLOWED_ANALYTICS_IPS = [
+    '69.166.55.114',
+    '127.0.0.1',
+    '192.168.0.0/24'  # 192.168.0.* range
+]
+
+def is_ip_allowed(ip_str):
+    """Check if IP address is allowed to access analytics"""
+    try:
+        ip = ipaddress.ip_address(ip_str)
+        for allowed in ALLOWED_ANALYTICS_IPS:
+            if '/' in allowed:
+                # It's a network range
+                if ip in ipaddress.ip_network(allowed, strict=False):
+                    return True
+            else:
+                # It's a single IP
+                if str(ip) == allowed:
+                    return True
+        return False
+    except ValueError:
+        return False
 
 def load_hits():
     """Load hit counter from file"""
@@ -92,6 +117,16 @@ def chart():
 
 @app.route('/analytics')
 def analytics():
+    # Get client IP address
+    ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
+    if ip_address and ',' in ip_address:
+        # X-Forwarded-For can contain multiple IPs, take the first one
+        ip_address = ip_address.split(',')[0].strip()
+
+    # Check if IP is allowed
+    if not is_ip_allowed(ip_address):
+        abort(403)  # Forbidden
+
     return render_template('analytics.html')
 
 @app.route('/api/status')

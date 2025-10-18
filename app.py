@@ -3,7 +3,7 @@ from canyon_lake_data import CanyonLakeMonitor
 import os
 import json
 import threading
-from datetime import datetime
+from datetime import datetime, timedelta
 import ipaddress
 
 app = Flask(__name__)
@@ -176,6 +176,32 @@ def get_flow_12hr():
 def get_stats():
     """Get hit counter statistics"""
     hits_data = load_hits()
+
+    # Calculate unique visitors for different time periods
+    now = datetime.now()
+    twenty_four_hours_ago = now - timedelta(hours=24)
+    seven_days_ago = now - timedelta(days=7)
+
+    unique_24h = set()
+    unique_7d = set()
+
+    for hit in hits_data.get('recent_hits', []):
+        try:
+            hit_time = datetime.fromisoformat(hit['timestamp'])
+            ip = hit['ip']
+
+            if hit_time >= twenty_four_hours_ago:
+                unique_24h.add(ip)
+
+            if hit_time >= seven_days_ago:
+                unique_7d.add(ip)
+        except (ValueError, KeyError):
+            continue
+
+    # Add calculated stats to the response
+    hits_data['unique_visitors_24h'] = len(unique_24h)
+    hits_data['unique_visitors_7d'] = len(unique_7d)
+
     return jsonify({
         'status': 'success',
         'stats': hits_data

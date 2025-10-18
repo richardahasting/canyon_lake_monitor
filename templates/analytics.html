@@ -21,12 +21,27 @@
                     <div class="stat-value" id="total-hits">-</div>
                 </div>
                 <div class="stat-box">
-                    <div class="stat-label">Unique Visitors</div>
+                    <div class="stat-label">Unique Visitors (All Time)</div>
                     <div class="stat-value" id="unique-visitors">-</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Unique Visitors (24h)</div>
+                    <div class="stat-value" id="unique-visitors-24h">-</div>
+                </div>
+            </div>
+
+            <div class="stats" style="margin-bottom: 30px;">
+                <div class="stat-box">
+                    <div class="stat-label">Unique Visitors (7d)</div>
+                    <div class="stat-value" id="unique-visitors-7d">-</div>
                 </div>
                 <div class="stat-box">
                     <div class="stat-label">First Visit</div>
                     <div class="stat-value" id="first-visit" style="font-size: 1em;">-</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Last Visit</div>
+                    <div class="stat-value" id="last-visit" style="font-size: 1em;">-</div>
                 </div>
             </div>
 
@@ -101,10 +116,17 @@
             // Update summary stats
             document.getElementById('total-hits').textContent = stats.total.toLocaleString();
             document.getElementById('unique-visitors').textContent = stats.unique_ips.length.toLocaleString();
+            document.getElementById('unique-visitors-24h').textContent = stats.unique_visitors_24h.toLocaleString();
+            document.getElementById('unique-visitors-7d').textContent = stats.unique_visitors_7d.toLocaleString();
 
             if (stats.first_hit) {
                 const firstDate = new Date(stats.first_hit);
                 document.getElementById('first-visit').textContent = firstDate.toLocaleDateString();
+            }
+
+            if (stats.last_hit) {
+                const lastDate = new Date(stats.last_hit);
+                document.getElementById('last-visit').textContent = lastDate.toLocaleDateString();
             }
 
             // Display route chart

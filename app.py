@@ -213,6 +213,18 @@ def get_environment():
     env_data = monitor.get_environment_data()
     return jsonify(env_data)
 
+@app.route('/robots.txt')
+def robots_txt():
+    """Serve robots.txt for search engine crawlers"""
+    from flask import send_from_directory
+    return send_from_directory('static', 'robots.txt', mimetype='text/plain')
+
+@app.route('/sitemap.xml')
+def sitemap_xml():
+    """Serve sitemap.xml for search engines"""
+    from flask import send_from_directory
+    return send_from_directory('static', 'sitemap.xml', mimetype='application/xml')
+
 if __name__ == '__main__':
     # Create templates directory if it doesn't exist
     os.makedirs('templates', exist_ok=True)

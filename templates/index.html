@@ -3,7 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Canyon Lake Water Level Monitor</title>
+    <title>Canyon Lake Water Level Monitor | Real-Time Texas Lake Levels</title>
+
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Real-time Canyon Lake water level monitoring in Texas. Check current lake elevation, percentage full, weather, and 30-day historical data for Canyon Lake near New Braunfels, TX.">
+    <meta name="keywords" content="Canyon Lake, Texas, water level, lake levels, New Braunfels, USGS, lake monitor, Guadalupe River, Texas lakes, water conservation, lake status">
+    <meta name="author" content="Richard Hasting">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://isthelakefull.com/">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://isthelakefull.com/">
+    <meta property="og:title" content="Is Canyon Lake Full Yet? | Real-Time Water Level Monitor">
+    <meta property="og:description" content="Check real-time water levels for Canyon Lake in Texas. View current elevation, percentage full, weather conditions, and historical trends.">
+    <meta property="og:site_name" content="Canyon Lake Monitor">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://isthelakefull.com/">
+    <meta property="twitter:title" content="Is Canyon Lake Full Yet? | Real-Time Water Level Monitor">
+    <meta property="twitter:description" content="Check real-time water levels for Canyon Lake in Texas. View current elevation, percentage full, weather conditions, and historical trends.">
+
+    <!-- Geographic Tags -->
+    <meta name="geo.region" content="US-TX">
+    <meta name="geo.placename" content="Canyon Lake, Texas">
+    <meta name="geo.position" content="29.8719;-98.2697">
+    <meta name="ICBM" content="29.8719, -98.2697">
+
+    <!-- Structured Data (Schema.org) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Canyon Lake Water Level Monitor",
+      "url": "https://isthelakefull.com/",
+      "description": "Real-time Canyon Lake water level monitoring for Canyon Lake, Texas",
+      "author": {
+        "@type": "Person",
+        "name": "Richard Hasting"
+      },
+      "about": {
+        "@type": "LakeBodyOfWater",
+        "name": "Canyon Lake",
+        "geo": {
+          "@type": "GeoCoordinates",
+          "latitude": "29.8719",
+          "longitude": "-98.2697"
+        },
+        "address": {
+          "@type": "PostalAddress",
+          "addressRegion": "TX",
+          "addressCountry": "US"
+        }
+      },
+      "provider": {
+        "@type": "GovernmentOrganization",
+        "name": "U.S. Geological Survey",
+        "url": "https://waterservices.usgs.gov/"
+      }
+    }
+    </script>
+
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>

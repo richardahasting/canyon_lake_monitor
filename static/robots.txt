@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Allow: /chart
+Disallow: /analytics
+Disallow: /api/
+
+Sitemap: https://isthelakefull.com/sitemap.xml

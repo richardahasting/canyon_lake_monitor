@@ -1,5 +1,6 @@
 from flask import Flask, jsonify, render_template, request, abort
 from canyon_lake_data import CanyonLakeMonitor
+from bot_detector import detect_bot
 import os
 import json
 import threading
@@ -66,8 +67,15 @@ def save_hits(hits_data):
     except Exception as e:
         print(f"Error saving hits: {e}")
 
-def increment_hit_counter(route, ip_address):
-    """Increment hit counter for a specific route and track IP"""
+def increment_hit_counter(route, ip_address, user_agent=None):
+    """
+    Increment hit counter for a specific route and track IP with bot detection.
+
+    Args:
+        route: The URL route being accessed
+        ip_address: The client IP address
+        user_agent: The User-Agent header (optional for backward compatibility)
+    """
     hits_data = load_hits()
     hits_data['total'] = hits_data.get('total', 0) + 1
 
@@ -80,16 +88,25 @@ def increment_hit_counter(route, ip_address):
         hits_data['first_hit'] = now
     hits_data['last_hit'] = now
 
-    # Track unique IPs
+    # Detect if this is a bot
+    bot_info = detect_bot(user_agent) if user_agent else {'is_bot': False, 'category': None, 'matched_pattern': None}
+
+    # Track unique IPs (separate for humans and bots)
     if ip_address not in hits_data['unique_ips']:
         hits_data['unique_ips'].append(ip_address)
 
     # Add to recent hits (keep last 100)
-    hits_data['recent_hits'].append({
+    hit_record = {
         'timestamp': now,
         'route': route,
-        'ip': ip_address
-    })
+        'ip': ip_address,
+        'user_agent': user_agent or 'unknown',
+        'is_bot': bot_info['is_bot'],
+        'bot_category': bot_info['category'],
+        'bot_pattern': bot_info['matched_pattern']
+    }
+    hits_data['recent_hits'].append(hit_record)
+
     # Keep only the last 100 hits
     if len(hits_data['recent_hits']) > 100:
         hits_data['recent_hits'] = hits_data['recent_hits'][-100:]
@@ -98,14 +115,18 @@ def increment_hit_counter(route, ip_address):
 
 @app.before_request
 def track_hits():
-    """Track page hits for main routes"""
+    """Track page hits for main routes with bot detection"""
     if request.endpoint in ['index', 'chart']:
         # Get IP address, handle proxy forwarding
         ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
         if ip_address and ',' in ip_address:
             # X-Forwarded-For can contain multiple IPs, take the first one
             ip_address = ip_address.split(',')[0].strip()
-        increment_hit_counter(request.path, ip_address)
+
+        # Get User-Agent for bot detection
+        user_agent = request.headers.get('User-Agent', '')
+
+        increment_hit_counter(request.path, ip_address, user_agent)
 
 @app.route('/')
 def index():
@@ -174,7 +195,15 @@ def get_flow_12hr():
 
 @app.route('/api/stats')
 def get_stats():
-    """Get hit counter statistics"""
+    """
+    Get hit counter statistics with bot vs human separation.
+
+    Returns comprehensive analytics including:
+    - Total hits (all, human, bot)
+    - Unique visitors by time period (24h, 7d, all-time)
+    - Bot category breakdown
+    - Recent hits with bot classification
+    """
     hits_data = load_hits()
 
     # Calculate unique visitors for different time periods
@@ -182,30 +211,102 @@ def get_stats():
     twenty_four_hours_ago = now - timedelta(hours=24)
     seven_days_ago = now - timedelta(days=7)
 
-    unique_24h = set()
-    unique_7d = set()
+    # Separate tracking for humans and bots
+    unique_humans_24h = set()
+    unique_humans_7d = set()
+    unique_humans_all = set()
+    unique_bots_24h = set()
+    unique_bots_7d = set()
+    unique_bots_all = set()
+
+    # Bot category counters
+    bot_categories = {}
+    bot_categories_24h = {}
+    bot_categories_7d = {}
+
+    # Hit counters
+    human_hits = 0
+    bot_hits = 0
 
     for hit in hits_data.get('recent_hits', []):
         try:
             hit_time = datetime.fromisoformat(hit['timestamp'])
             ip = hit['ip']
+            is_bot = hit.get('is_bot', False)
+            bot_category = hit.get('bot_category', None)
 
-            if hit_time >= twenty_four_hours_ago:
-                unique_24h.add(ip)
+            # Count total hits by type
+            if is_bot:
+                bot_hits += 1
+            else:
+                human_hits += 1
 
-            if hit_time >= seven_days_ago:
-                unique_7d.add(ip)
-        except (ValueError, KeyError):
+            # Track unique IPs by type and time period
+            if is_bot:
+                unique_bots_all.add(ip)
+                if bot_category:
+                    bot_categories[bot_category] = bot_categories.get(bot_category, 0) + 1
+
+                if hit_time >= twenty_four_hours_ago:
+                    unique_bots_24h.add(ip)
+                    if bot_category:
+                        bot_categories_24h[bot_category] = bot_categories_24h.get(bot_category, 0) + 1
+
+                if hit_time >= seven_days_ago:
+                    unique_bots_7d.add(ip)
+                    if bot_category:
+                        bot_categories_7d[bot_category] = bot_categories_7d.get(bot_category, 0) + 1
+            else:
+                unique_humans_all.add(ip)
+
+                if hit_time >= twenty_four_hours_ago:
+                    unique_humans_24h.add(ip)
+
+                if hit_time >= seven_days_ago:
+                    unique_humans_7d.add(ip)
+
+        except (ValueError, KeyError) as e:
+            print(f"Error processing hit record: {e}")
             continue
 
-    # Add calculated stats to the response
-    hits_data['unique_visitors_24h'] = len(unique_24h)
-    hits_data['unique_visitors_7d'] = len(unique_7d)
-
-    return jsonify({
+    # Build comprehensive response
+    response = {
         'status': 'success',
-        'stats': hits_data
-    })
+        'stats': {
+            # Legacy fields for backward compatibility
+            'total': hits_data.get('total', 0),
+            'routes': hits_data.get('routes', {}),
+            'first_hit': hits_data.get('first_hit'),
+            'last_hit': hits_data.get('last_hit'),
+            'unique_ips': hits_data.get('unique_ips', []),
+            'recent_hits': hits_data.get('recent_hits', []),
+
+            # New: Hit counts by type
+            'human_hits': human_hits,
+            'bot_hits': bot_hits,
+
+            # New: Unique visitors - Humans only
+            'unique_humans_24h': len(unique_humans_24h),
+            'unique_humans_7d': len(unique_humans_7d),
+            'unique_humans_all': len(unique_humans_all),
+
+            # New: Unique visitors - Bots only
+            'unique_bots_24h': len(unique_bots_24h),
+            'unique_bots_7d': len(unique_bots_7d),
+            'unique_bots_all': len(unique_bots_all),
+
+            # New: Bot category breakdown
+            'bot_categories': bot_categories,
+            'bot_categories_24h': bot_categories_24h,
+            'bot_categories_7d': bot_categories_7d,
+
+            # Legacy: Combined unique visitors (kept for backward compatibility)
+            'unique_visitors_24h': len(unique_humans_24h) + len(unique_bots_24h),
+            'unique_visitors_7d': len(unique_humans_7d) + len(unique_bots_7d),
+        }
+    }
+
+    return jsonify(response)
 
 @app.route('/api/environment')
 def get_environment():

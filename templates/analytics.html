@@ -21,21 +21,6 @@
                     <div class="stat-value" id="total-hits">-</div>
                 </div>
                 <div class="stat-box">
-                    <div class="stat-label">Unique Visitors (All Time)</div>
-                    <div class="stat-value" id="unique-visitors">-</div>
-                </div>
-                <div class="stat-box">
-                    <div class="stat-label">Unique Visitors (24h)</div>
-                    <div class="stat-value" id="unique-visitors-24h">-</div>
-                </div>
-            </div>
-
-            <div class="stats" style="margin-bottom: 30px;">
-                <div class="stat-box">
-                    <div class="stat-label">Unique Visitors (7d)</div>
-                    <div class="stat-value" id="unique-visitors-7d">-</div>
-                </div>
-                <div class="stat-box">
                     <div class="stat-label">First Visit</div>
                     <div class="stat-value" id="first-visit" style="font-size: 1em;">-</div>
                 </div>
@@ -43,6 +28,49 @@
                     <div class="stat-label">Last Visit</div>
                     <div class="stat-value" id="last-visit" style="font-size: 1em;">-</div>
                 </div>
+            </div>
+
+            <!-- Human vs Bot Stats -->
+            <div style="background: white; border-radius: 15px; padding: 20px; margin-bottom: 30px;">
+                <h2 style="font-size: 1.5em; margin-bottom: 15px;">👥 Human Visitors</h2>
+                <div class="stats">
+                    <div class="stat-box">
+                        <div class="stat-label">All Time</div>
+                        <div class="stat-value" id="humans-all" style="color: #48c9b0;">-</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Last 24 Hours</div>
+                        <div class="stat-value" id="humans-24h" style="color: #48c9b0;">-</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Last 7 Days</div>
+                        <div class="stat-value" id="humans-7d" style="color: #48c9b0;">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="background: white; border-radius: 15px; padding: 20px; margin-bottom: 30px;">
+                <h2 style="font-size: 1.5em; margin-bottom: 15px;">🤖 Bot/Crawler Visitors</h2>
+                <div class="stats">
+                    <div class="stat-box">
+                        <div class="stat-label">All Time</div>
+                        <div class="stat-value" id="bots-all" style="color: #e74c3c;">-</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Last 24 Hours</div>
+                        <div class="stat-value" id="bots-24h" style="color: #e74c3c;">-</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Last 7 Days</div>
+                        <div class="stat-value" id="bots-7d" style="color: #e74c3c;">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bot Category Breakdown -->
+            <div style="background: white; border-radius: 15px; padding: 20px; margin-bottom: 30px;">
+                <h2 style="font-size: 1.5em; margin-bottom: 15px;">Bot Categories (All Time)</h2>
+                <div id="bot-categories" style="min-height: 100px;"></div>
             </div>
 
             <!-- Hits by Route Chart -->
@@ -63,6 +91,8 @@
                                 <th style="padding: 10px; text-align: left;">Timestamp</th>
                                 <th style="padding: 10px; text-align: left;">Page</th>
                                 <th style="padding: 10px; text-align: left;">IP Address</th>
+                                <th style="padding: 10px; text-align: left;">Type</th>
+                                <th style="padding: 10px; text-align: left;">Bot Category</th>
                             </tr>
                         </thead>
                         <tbody id="visits-tbody">
@@ -71,10 +101,16 @@
                 </div>
             </div>
 
-            <!-- Top Visitors -->
+            <!-- Top Human Visitors -->
             <div style="background: white; border-radius: 15px; padding: 20px; margin-bottom: 30px;">
-                <h2 style="font-size: 1.5em; margin-bottom: 15px;">Top Visitors</h2>
-                <div id="top-visitors"></div>
+                <h2 style="font-size: 1.5em; margin-bottom: 15px;">👥 Top Human Visitors</h2>
+                <div id="top-humans"></div>
+            </div>
+
+            <!-- Top Bot Visitors -->
+            <div style="background: white; border-radius: 15px; padding: 20px; margin-bottom: 30px;">
+                <h2 style="font-size: 1.5em; margin-bottom: 15px;">🤖 Top Bot Visitors</h2>
+                <div id="top-bots"></div>
             </div>
 
             <div style="text-align: center; margin-top: 30px;">
@@ -115,9 +151,6 @@
 
             // Update summary stats
             document.getElementById('total-hits').textContent = stats.total.toLocaleString();
-            document.getElementById('unique-visitors').textContent = stats.unique_ips.length.toLocaleString();
-            document.getElementById('unique-visitors-24h').textContent = stats.unique_visitors_24h.toLocaleString();
-            document.getElementById('unique-visitors-7d').textContent = stats.unique_visitors_7d.toLocaleString();
 
             if (stats.first_hit) {
                 const firstDate = new Date(stats.first_hit);
@@ -129,14 +162,28 @@
                 document.getElementById('last-visit').textContent = lastDate.toLocaleDateString();
             }
 
+            // Update human visitor stats
+            document.getElementById('humans-all').textContent = (stats.unique_humans_all || 0).toLocaleString();
+            document.getElementById('humans-24h').textContent = (stats.unique_humans_24h || 0).toLocaleString();
+            document.getElementById('humans-7d').textContent = (stats.unique_humans_7d || 0).toLocaleString();
+
+            // Update bot visitor stats
+            document.getElementById('bots-all').textContent = (stats.unique_bots_all || 0).toLocaleString();
+            document.getElementById('bots-24h').textContent = (stats.unique_bots_24h || 0).toLocaleString();
+            document.getElementById('bots-7d').textContent = (stats.unique_bots_7d || 0).toLocaleString();
+
+            // Display bot categories
+            displayBotCategories(stats.bot_categories || {});
+
             // Display route chart
             displayRouteChart(stats.routes);
 
             // Display recent visits
             displayRecentVisits(stats.recent_hits || []);
 
-            // Display top visitors
-            displayTopVisitors(stats.recent_hits || []);
+            // Display top visitors (separated by type)
+            displayTopHumans(stats.recent_hits || []);
+            displayTopBots(stats.recent_hits || []);
         }
 
         function displayRouteChart(routes) {
@@ -200,6 +247,39 @@
             routeChart = new Chart(ctx, config);
         }
 
+        function displayBotCategories(botCategories) {
+            const container = document.getElementById('bot-categories');
+
+            if (Object.keys(botCategories).length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #999;">No bot activity detected</p>';
+                return;
+            }
+
+            // Sort by count
+            const sorted = Object.entries(botCategories)
+                .sort((a, b) => b[1] - a[1]);
+
+            const total = Object.values(botCategories).reduce((sum, count) => sum + count, 0);
+
+            let html = '<div style="display: grid; gap: 10px;">';
+            sorted.forEach(([category, count]) => {
+                const percentage = (count / total * 100).toFixed(1);
+                const barWidth = Math.max(5, percentage);
+                html += `
+                    <div style="display: flex; align-items: center; padding: 10px; background: #f8f9fa; border-radius: 8px;">
+                        <div style="flex: 0 0 150px; font-weight: bold;">${category}</div>
+                        <div style="flex: 1; margin: 0 15px;">
+                            <div style="background: #e74c3c; height: 20px; width: ${barWidth}%; border-radius: 4px;"></div>
+                        </div>
+                        <div style="flex: 0 0 80px; text-align: right; font-weight: bold;">${count} hits</div>
+                        <div style="flex: 0 0 60px; text-align: right; color: #666;">${percentage}%</div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
         function displayRecentVisits(recentHits) {
             const tbody = document.getElementById('visits-tbody');
             tbody.innerHTML = '';
@@ -217,25 +297,33 @@
                 const pageName = hit.route === '/' ? 'Home' :
                                 hit.route === '/chart' ? 'Lake History' : hit.route;
 
+                const isBot = hit.is_bot || false;
+                const typeLabel = isBot ? '🤖 Bot' : '👥 Human';
+                const typeColor = isBot ? '#e74c3c' : '#48c9b0';
+                const botCategory = hit.bot_category || '-';
+
                 row.innerHTML = `
                     <td style="padding: 10px;">${formattedTime}</td>
                     <td style="padding: 10px;">${pageName}</td>
                     <td style="padding: 10px; font-family: monospace;">${hit.ip}</td>
+                    <td style="padding: 10px; color: ${typeColor}; font-weight: bold;">${typeLabel}</td>
+                    <td style="padding: 10px; color: #666;">${botCategory}</td>
                 `;
                 tbody.appendChild(row);
             });
 
             if (hitsToShow.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" style="padding: 20px; text-align: center; color: #999;">No visit data available</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" style="padding: 20px; text-align: center; color: #999;">No visit data available</td></tr>';
             }
         }
 
-        function displayTopVisitors(recentHits) {
-            const container = document.getElementById('top-visitors');
+        function displayTopHumans(recentHits) {
+            const container = document.getElementById('top-humans');
 
-            // Count hits by IP
+            // Filter for humans only and count by IP
+            const humanHits = recentHits.filter(hit => !hit.is_bot);
             const ipCounts = {};
-            recentHits.forEach(hit => {
+            humanHits.forEach(hit => {
                 ipCounts[hit.ip] = (ipCounts[hit.ip] || 0) + 1;
             });
 
@@ -245,17 +333,59 @@
                 .slice(0, 10);
 
             if (sorted.length === 0) {
-                container.innerHTML = '<p style="text-align: center; color: #999;">No visitor data available</p>';
+                container.innerHTML = '<p style="text-align: center; color: #999;">No human visitor data available</p>';
                 return;
             }
 
             let html = '<div style="display: grid; gap: 10px;">';
             sorted.forEach(([ip, count]) => {
-                const percentage = (count / recentHits.length * 100).toFixed(1);
+                const percentage = (count / humanHits.length * 100).toFixed(1);
                 html += `
                     <div style="display: flex; align-items: center; padding: 10px; background: #f8f9fa; border-radius: 8px;">
                         <div style="flex: 1; font-family: monospace;">${ip}</div>
                         <div style="font-weight: bold; margin: 0 20px;">${count} hits</div>
+                        <div style="color: #666;">${percentage}%</div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function displayTopBots(recentHits) {
+            const container = document.getElementById('top-bots');
+
+            // Filter for bots only and count by IP with category
+            const botHits = recentHits.filter(hit => hit.is_bot);
+            const ipData = {};
+            botHits.forEach(hit => {
+                if (!ipData[hit.ip]) {
+                    ipData[hit.ip] = {
+                        count: 0,
+                        category: hit.bot_category || 'Unknown'
+                    };
+                }
+                ipData[hit.ip].count++;
+            });
+
+            // Sort by count
+            const sorted = Object.entries(ipData)
+                .sort((a, b) => b[1].count - a[1].count)
+                .slice(0, 10);
+
+            if (sorted.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #999;">No bot visitor data available</p>';
+                return;
+            }
+
+            let html = '<div style="display: grid; gap: 10px;">';
+            sorted.forEach(([ip, data]) => {
+                const percentage = (data.count / botHits.length * 100).toFixed(1);
+                html += `
+                    <div style="display: flex; align-items: center; padding: 10px; background: #f8f9fa; border-radius: 8px;">
+                        <div style="flex: 1; font-family: monospace;">${ip}</div>
+                        <div style="flex: 0 0 120px; color: #666; font-size: 0.9em;">${data.category}</div>
+                        <div style="font-weight: bold; margin: 0 20px;">${data.count} hits</div>
                         <div style="color: #666;">${percentage}%</div>
                     </div>
                 `;

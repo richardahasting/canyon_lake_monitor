@@ -398,8 +398,8 @@ class CanyonLakeMonitor:
 
             return {
                 'is_daytime': is_day,
-                'sunrise': sun_times['sunrise'].strftime('%I:%M %p'),
-                'sunset': sun_times['sunset'].strftime('%I:%M %p')
+                'sunrise': sun_times['sunrise'].strftime('%H:%M'),
+                'sunset': sun_times['sunset'].strftime('%H:%M')
             }
         except Exception as e:
             print(f"Error calculating day/night: {e}")
@@ -407,8 +407,8 @@ class CanyonLakeMonitor:
             hour = datetime.now().hour
             return {
                 'is_daytime': 6 <= hour <= 20,
-                'sunrise': '6:00 AM',
-                'sunset': '8:00 PM'
+                'sunrise': '06:00',
+                'sunset': '20:00'
             }
 
     def get_environment_data(self) -> Dict:

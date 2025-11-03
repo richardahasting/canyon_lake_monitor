@@ -50,13 +50,20 @@ def load_hits():
                         data['unique_ips'] = []
                     if 'recent_hits' not in data:
                         data['recent_hits'] = []
+                    # New: permanent tracking of all unique visitors
+                    if 'all_time_human_ips' not in data:
+                        data['all_time_human_ips'] = {}  # {ip: first_seen_timestamp}
+                    if 'all_time_bot_ips' not in data:
+                        data['all_time_bot_ips'] = {}  # {ip: first_seen_timestamp}
                     return data
             return {'total': 0, 'routes': {}, 'first_hit': None, 'last_hit': None,
-                    'unique_ips': [], 'recent_hits': []}
+                    'unique_ips': [], 'recent_hits': [],
+                    'all_time_human_ips': {}, 'all_time_bot_ips': {}}
     except Exception as e:
         print(f"Error loading hits: {e}")
         return {'total': 0, 'routes': {}, 'first_hit': None, 'last_hit': None,
-                'unique_ips': [], 'recent_hits': []}
+                'unique_ips': [], 'recent_hits': [],
+                'all_time_human_ips': {}, 'all_time_bot_ips': {}}
 
 def save_hits(hits_data):
     """Save hit counter to file"""
@@ -95,6 +102,14 @@ def increment_hit_counter(route, ip_address, user_agent=None):
     if ip_address not in hits_data['unique_ips']:
         hits_data['unique_ips'].append(ip_address)
 
+    # Track all-time unique visitors permanently (separate humans and bots)
+    if bot_info['is_bot']:
+        if ip_address not in hits_data['all_time_bot_ips']:
+            hits_data['all_time_bot_ips'][ip_address] = now
+    else:
+        if ip_address not in hits_data['all_time_human_ips']:
+            hits_data['all_time_human_ips'][ip_address] = now
+
     # Add to recent hits (keep last 100)
     hit_record = {
         'timestamp': now,
@@ -112,6 +127,32 @@ def increment_hit_counter(route, ip_address, user_agent=None):
         hits_data['recent_hits'] = hits_data['recent_hits'][-100:]
 
     save_hits(hits_data)
+
+@app.after_request
+def add_security_headers(response):
+    """Add security headers to all responses"""
+    # Content Security Policy - allow inline scripts/styles for Chart.js and our site
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: https:; "
+        "font-src 'self' data:; "
+        "connect-src 'self' https://waterservices.usgs.gov https://api.weather.gov; "
+        "frame-ancestors 'none';"
+    )
+    # Prevent clickjacking
+    response.headers['X-Frame-Options'] = 'DENY'
+    # Prevent MIME type sniffing
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    # Enforce HTTPS (when deployed with HTTPS)
+    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    # Control referrer information
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    # XSS protection (legacy browsers)
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+
+    return response
 
 @app.before_request
 def track_hits():
@@ -159,6 +200,22 @@ def analytics():
         abort(403)  # Forbidden
 
     return render_template('analytics.html')
+
+@app.route('/community-info')
+def community_info():
+    return render_template('community-info.html')
+
+@app.route('/about')
+def about():
+    return render_template('about.html')
+
+@app.route('/contact')
+def contact():
+    return render_template('contact.html')
+
+@app.route('/privacy')
+def privacy():
+    return render_template('privacy.html')
 
 @app.route('/api/status')
 def get_status():
@@ -214,10 +271,8 @@ def get_stats():
     # Separate tracking for humans and bots
     unique_humans_24h = set()
     unique_humans_7d = set()
-    unique_humans_all = set()
     unique_bots_24h = set()
     unique_bots_7d = set()
-    unique_bots_all = set()
 
     # Bot category counters
     bot_categories = {}
@@ -228,6 +283,7 @@ def get_stats():
     human_hits = 0
     bot_hits = 0
 
+    # Process recent hits for time-limited stats (24h, 7d) and bot categories
     for hit in hits_data.get('recent_hits', []):
         try:
             hit_time = datetime.fromisoformat(hit['timestamp'])
@@ -241,9 +297,8 @@ def get_stats():
             else:
                 human_hits += 1
 
-            # Track unique IPs by type and time period
+            # Track unique IPs by type and time period (only for 24h and 7d)
             if is_bot:
-                unique_bots_all.add(ip)
                 if bot_category:
                     bot_categories[bot_category] = bot_categories.get(bot_category, 0) + 1
 
@@ -257,8 +312,6 @@ def get_stats():
                     if bot_category:
                         bot_categories_7d[bot_category] = bot_categories_7d.get(bot_category, 0) + 1
             else:
-                unique_humans_all.add(ip)
-
                 if hit_time >= twenty_four_hours_ago:
                     unique_humans_24h.add(ip)
 
@@ -268,6 +321,10 @@ def get_stats():
         except (ValueError, KeyError) as e:
             print(f"Error processing hit record: {e}")
             continue
+
+    # All-time counts come from permanent tracking (not limited to recent_hits)
+    unique_humans_all = len(hits_data.get('all_time_human_ips', {}))
+    unique_bots_all = len(hits_data.get('all_time_bot_ips', {}))
 
     # Build comprehensive response
     response = {
@@ -288,12 +345,12 @@ def get_stats():
             # New: Unique visitors - Humans only
             'unique_humans_24h': len(unique_humans_24h),
             'unique_humans_7d': len(unique_humans_7d),
-            'unique_humans_all': len(unique_humans_all),
+            'unique_humans_all': unique_humans_all,  # Already a count from permanent tracking
 
             # New: Unique visitors - Bots only
             'unique_bots_24h': len(unique_bots_24h),
             'unique_bots_7d': len(unique_bots_7d),
-            'unique_bots_all': len(unique_bots_all),
+            'unique_bots_all': unique_bots_all,  # Already a count from permanent tracking
 
             # New: Bot category breakdown
             'bot_categories': bot_categories,

@@ -1,3 +1,4 @@
+import logging
 import requests
 import json
 import os
@@ -6,6 +7,8 @@ from datetime import datetime, timedelta
 from typing import Dict, Optional, List
 from astral import LocationInfo
 from astral.sun import sun
+
+logger = logging.getLogger(__name__)
 
 class CanyonLakeMonitor:
     def __init__(self):
@@ -35,11 +38,11 @@ class CanyonLakeMonitor:
         }
         
         try:
-            response = requests.get(self.base_url, params=params)
+            response = requests.get(self.base_url, params=params, timeout=15)
             response.raise_for_status()
             return response.json()
         except requests.RequestException as e:
-            print(f"Error fetching data: {e}")
+            logger.error("Error fetching USGS current data: %s", e)
             return None
     
     def parse_water_level(self, data: Dict) -> Optional[float]:
@@ -51,8 +54,8 @@ class CanyonLakeMonitor:
                     values = series['values'][0]['value']
                     if values:
                         return float(values[0]['value'])
-        except (KeyError, IndexError, ValueError):
-            pass
+        except (KeyError, IndexError, ValueError) as e:
+            logger.warning("Failed to parse water level from USGS response: %s", e)
         return None
     
     def calculate_percentage_full(self, current_elevation: float) -> float:
@@ -140,12 +143,12 @@ class CanyonLakeMonitor:
         
         try:
             # Get lake data
-            lake_response = requests.get(self.dv_url, params=lake_params)
+            lake_response = requests.get(self.dv_url, params=lake_params, timeout=15)
             lake_response.raise_for_status()
             lake_data = lake_response.json()
-            
+
             # Get river flow data
-            river_response = requests.get(self.dv_url, params=river_params)
+            river_response = requests.get(self.dv_url, params=river_params, timeout=15)
             river_response.raise_for_status()
             river_data = river_response.json()
             
@@ -194,7 +197,7 @@ class CanyonLakeMonitor:
             }
             
         except (requests.RequestException, KeyError, IndexError, ValueError) as e:
-            print(f"Error fetching historical data: {e}")
+            logger.error("Error fetching USGS historical data: %s", e)
             return None
     
     def fetch_river_flow_12hr(self, days: int = 30) -> Optional[List[Dict]]:
@@ -212,7 +215,7 @@ class CanyonLakeMonitor:
         
         try:
             # Get instantaneous values
-            response = requests.get(self.base_url, params=params)
+            response = requests.get(self.base_url, params=params, timeout=15)
             response.raise_for_status()
             data = response.json()
             
@@ -276,7 +279,7 @@ class CanyonLakeMonitor:
             return aggregated_data
             
         except (requests.RequestException, KeyError, IndexError, ValueError) as e:
-            print(f"Error fetching 12-hour flow data: {e}")
+            logger.error("Error fetching USGS 12-hour flow data: %s", e)
             return None
 
     def fetch_weather(self) -> Optional[Dict]:
@@ -333,7 +336,7 @@ class CanyonLakeMonitor:
             }
 
         except (requests.RequestException, KeyError, ValueError, TypeError) as e:
-            print(f"Error fetching weather data from weather.gov: {e}")
+            logger.error("Error fetching weather data from weather.gov: %s", e)
             return {
                 'temperature': None,
                 'description': 'Unable to fetch weather',
@@ -402,7 +405,7 @@ class CanyonLakeMonitor:
                 'sunset': sun_times['sunset'].strftime('%H:%M')
             }
         except Exception as e:
-            print(f"Error calculating day/night: {e}")
+            logger.warning("Error calculating day/night using astral, falling back to fixed hours: %s", e)
             # Fallback to simple time check (6 AM - 8 PM)
             hour = datetime.now().hour
             return {

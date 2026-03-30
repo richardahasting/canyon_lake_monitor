@@ -1,3 +1,5 @@
+import logging
+import logging.handlers
 from flask import Flask, jsonify, render_template, request, abort
 from canyon_lake_data import CanyonLakeMonitor
 from bot_detector import detect_bot
@@ -6,6 +8,17 @@ import json
 import threading
 from datetime import datetime, timedelta
 import ipaddress
+
+# Configure logging: INFO+ to app.log, WARNING+ to stderr
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s %(name)s: %(message)s',
+    handlers=[
+        logging.FileHandler('app.log'),
+        logging.StreamHandler(),
+    ]
+)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 monitor = CanyonLakeMonitor()
@@ -60,7 +73,7 @@ def load_hits():
                     'unique_ips': [], 'recent_hits': [],
                     'all_time_human_ips': {}, 'all_time_bot_ips': {}}
     except Exception as e:
-        print(f"Error loading hits: {e}")
+        logger.error("Error loading hits from %s: %s", HITS_FILE, e)
         return {'total': 0, 'routes': {}, 'first_hit': None, 'last_hit': None,
                 'unique_ips': [], 'recent_hits': [],
                 'all_time_human_ips': {}, 'all_time_bot_ips': {}}
@@ -72,7 +85,7 @@ def save_hits(hits_data):
             with open(HITS_FILE, 'w') as f:
                 json.dump(hits_data, f, indent=2)
     except Exception as e:
-        print(f"Error saving hits: {e}")
+        logger.error("Error saving hits to %s: %s", HITS_FILE, e)
 
 def increment_hit_counter(route, ip_address, user_agent=None):
     """
@@ -319,7 +332,7 @@ def get_stats():
                     unique_humans_7d.add(ip)
 
         except (ValueError, KeyError) as e:
-            print(f"Error processing hit record: {e}")
+            logger.warning("Error processing hit record: %s", e)
             continue
 
     # All-time counts come from permanent tracking (not limited to recent_hits)

@@ -28,7 +28,12 @@ A comprehensive Python Flask application that displays real-time water level dat
   - Sunrise and sunset times (24-hour format)
   - Automatic day/night theme switching
 - **Auto-refresh** every 5 minutes
-- **Caribbean blue theme** inspired by Belize ocean colors
+- **Hill Country design**:
+  - Warm limestone palette with cedar, sunset, and Guadalupe-water accents
+  - Display typography in Fraunces (variable serif), body in Inter
+  - Three-layer parallax SVG waves drifting across the waterline
+  - Seven tiers of playful Texan status copy (`YES!`, `NOPE!`, `DRYIN' UP`, …)
+  - Cohesive day/night palette swap via CSS custom properties
 
 ### Historical Data (/chart)
 - **30-day historical view** of lake levels
@@ -90,6 +95,10 @@ A comprehensive Python Flask application that displays real-time water level dat
 3. Available pages:
    - `/` - Main dashboard with current status
    - `/chart` - Historical data and trends
+   - `/about` - About the site, data sources, and lake specifications
+   - `/contact` - Contact information and FAQ
+   - `/privacy` - Privacy policy
+   - `/community-info` - Community action guide with talking points for contacting officials
    - `/analytics` - Visitor analytics (restricted access)
 
 ## Configuration
@@ -164,20 +173,24 @@ canyon_lake_monitor/
 ├── requirements.txt          # Python dependencies
 ├── hits.json                 # Visitor analytics data (generated)
 ├── templates/
-│   ├── index.html           # Main dashboard
+│   ├── index.html           # Main dashboard (YES/NOPE hero + animated gauge)
 │   ├── chart.html           # Historical data page
+│   ├── about.html           # About / data sources / lake specs
+│   ├── contact.html         # Contact and FAQ
+│   ├── privacy.html         # Privacy policy
+│   ├── community-info.html  # Community action guide
 │   └── analytics.html       # Analytics dashboard
 └── static/
-    └── styles.css           # Stylesheet with Caribbean blue theme
+    └── styles.css           # Hill Country design system (tokens + night-mode swap)
 ```
 
 ## Features in Detail
 
 ### Day/Night Mode
-The application automatically switches between day and night themes based on the calculated sunrise and sunset times for Canyon Lake, Texas. The night mode features:
-- Darker background gradient
-- Subdued colors for better nighttime viewing
-- Maintained readability with adjusted contrast
+The application automatically switches between day and night themes based on the calculated sunrise and sunset times for Canyon Lake, Texas. Night mode is implemented as a CSS custom property override, so every component adapts from a single token swap:
+- Day: warm limestone background, cedar hills silhouette, Guadalupe-blue water
+- Night: deep dusk navy with a soft moon glow and warmer gold hero tones
+- Parallax wave animation and SVG hill silhouette persist in both modes
 
 ### Hit Counter and Analytics
 All page visits are tracked and stored in `hits.json`:
@@ -199,7 +212,7 @@ To modify the application:
 3. Edit templates in `templates/` for UI changes
 4. Edit `static/styles.css` for styling changes
 
-The application runs in debug mode by default when executed directly. For production deployment, consider using a production WSGI server like Gunicorn.
+The application currently runs with `debug=False` on Flask's built-in server. For higher-traffic production deployment, a WSGI server like Gunicorn behind nginx would be the next step.
 
 ## License
 

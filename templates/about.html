@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About - Canyon Lake Water Level Monitor</title>
+    <meta name="description" content="Learn about the Canyon Lake Water Level Monitor - a free public service providing real-time lake data from official USGS sources.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,400..900,0..100;1,9..144,400..900,0..100&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="chart-container" style="max-width: 800px;">
+        <h1 style="font-size: 2em; margin-bottom: 20px;">About This Site</h1>
+
+        <div class="info-section">
+            <h2>What is This Site?</h2>
+            <p class="intro-text">
+                <strong>IsCanyonLakeFull.com</strong> is a free public service that provides real-time water level information
+                for Canyon Lake, Texas. This site makes it easy for residents, boaters, fishermen, and visitors to quickly
+                check if the lake is full without navigating complex government websites.
+            </p>
+        </div>
+
+        <div class="issue-section">
+            <h2>📊 Official Data Sources</h2>
+            <div class="issue-content">
+                <p>All data on this site comes directly from official U.S. government sources:</p>
+                <ul class="talking-points">
+                    <li>
+                        <strong>U.S. Geological Survey (USGS)</strong>
+                        <p style="margin-top: 8px;">Water level and river flow data from USGS monitoring stations:</p>
+                        <ul style="margin-left: 20px; margin-top: 5px;">
+                            <li>Station 08167700 - Canyon Lake near New Braunfels, TX</li>
+                            <li>Station 08167500 - Guadalupe River near Spring Branch, TX</li>
+                        </ul>
+                        <p style="margin-top: 8px;">
+                            <a href="https://waterservices.usgs.gov/" target="_blank" rel="noopener noreferrer">
+                                Visit USGS Water Services →
+                            </a>
+                        </p>
+                    </li>
+                    <li>
+                        <strong>National Weather Service (weather.gov)</strong>
+                        <p style="margin-top: 8px;">Current weather conditions and temperature data.</p>
+                        <p style="margin-top: 8px;">
+                            <a href="https://api.weather.gov/" target="_blank" rel="noopener noreferrer">
+                                Visit weather.gov API →
+                            </a>
+                        </p>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="issue-section">
+            <h2>🎯 Purpose & Mission</h2>
+            <div class="issue-content">
+                <p>Canyon Lake is a vital resource for Central Texas, providing:</p>
+                <ul class="talking-points">
+                    <li><strong>Water Supply:</strong> Drinking water for the surrounding communities</li>
+                    <li><strong>Flood Control:</strong> Managed by the U.S. Army Corps of Engineers</li>
+                    <li><strong>Recreation:</strong> Boating, fishing, swimming, and water sports</li>
+                    <li><strong>Wildlife Habitat:</strong> Home to diverse Texas Hill Country ecosystems</li>
+                </ul>
+                <p style="margin-top: 15px;">
+                    This site was created to help our community stay informed about lake conditions in a simple,
+                    easy-to-understand format.
+                </p>
+            </div>
+        </div>
+
+        <div class="issue-section">
+            <h2>📈 How It Works</h2>
+            <div class="issue-content">
+                <p>The site fetches data from USGS servers every 15-60 minutes and displays:</p>
+                <ul class="talking-points">
+                    <li><strong>Current Elevation:</strong> The lake's water surface elevation above NGVD 1929</li>
+                    <li><strong>Percentage Full:</strong> Calculated against the conservation pool (909 ft)</li>
+                    <li><strong>Historical Trends:</strong> 30-day charts showing water level changes</li>
+                    <li><strong>River Flow:</strong> Guadalupe River inflow rates</li>
+                    <li><strong>Weather Data:</strong> Current temperature and conditions</li>
+                    <li><strong>Astronomical Data:</strong> Moon phase, sunrise/sunset times</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="issue-section">
+            <h2>🏞️ Lake Specifications</h2>
+            <div class="issue-content">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr style="border-bottom: 1px solid #ddd;">
+                        <td style="padding: 10px; font-weight: bold;">Location:</td>
+                        <td style="padding: 10px;">Comal County, Texas (16 miles NW of New Braunfels)</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #ddd;">
+                        <td style="padding: 10px; font-weight: bold;">Coordinates:</td>
+                        <td style="padding: 10px;">29.8719°N, 98.2697°W</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #ddd;">
+                        <td style="padding: 10px; font-weight: bold;">Conservation Pool:</td>
+                        <td style="padding: 10px;">909.0 feet (378,781 acre-feet capacity)</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #ddd;">
+                        <td style="padding: 10px; font-weight: bold;">Flood Pool:</td>
+                        <td style="padding: 10px;">943.0 feet</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #ddd;">
+                        <td style="padding: 10px; font-weight: bold;">Managed By:</td>
+                        <td style="padding: 10px;">U.S. Army Corps of Engineers</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px; font-weight: bold;">Dam Completed:</td>
+                        <td style="padding: 10px;">1964</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="info-section">
+            <h2>🔒 Privacy & Security</h2>
+            <p class="intro-text">
+                This site does not collect personal information, does not use tracking cookies for advertising,
+                and does not sell data. We collect basic anonymous analytics (page views, IP addresses) solely
+                to monitor site performance and usage. See our <a href="/privacy">Privacy Policy</a> for details.
+            </p>
+        </div>
+
+        <div class="info-section" style="background: #f0f8ff; border-left-color: #5DD9C1;">
+            <h2>👤 About the Creator</h2>
+            <p class="intro-text">
+                This site was created and maintained by <strong>Richard Hasting</strong>, a Canyon Lake resident
+                and software engineer with 38 years of experience in Unix/Linux systems and web development.
+                The site is a community service provided free of charge.
+            </p>
+            <p class="intro-text" style="margin-top: 15px;">
+                Questions or feedback? Visit our <a href="/contact">Contact page</a>.
+            </p>
+        </div>
+
+        <div style="text-align: center; margin-top: 40px;">
+            <a href="/" class="nav-link">Back to Lake Status</a>
+            <a href="/chart" class="nav-link" style="margin-left: 10px;">View Lake History</a>
+        </div>
+    </div>
+
+    <script>
+        // Add night mode support
+        async function fetchEnvironmentData() {
+            try {
+                const response = await fetch('/api/environment');
+                const data = await response.json();
+                if (data.status === 'success' && data.is_daytime === false) {
+                    document.body.classList.add('night-mode');
+                }
+            } catch (error) {
+                console.error('Error fetching environment data:', error);
+            }
+        }
+        fetchEnvironmentData();
+    </script>
+</body>
+</html>

@@ -30,6 +30,10 @@
     <meta property="twitter:title" content="Canyon Lake 30-Day History | Water Level Trends">
     <meta property="twitter:description" content="View 30-day historical water level trends and river flow data for Canyon Lake, Texas with interactive charts.">
 
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,400..900,0..100;1,9..144,400..900,0..100&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
@@ -68,13 +72,53 @@
                 <a href="/analytics" class="nav-link" style="margin-left: 10px;">View Site Analytics</a>
                 {% endif %}
             </div>
+
+            <div class="community-message">
+                <h2>🏞️ Community Action Needed</h2>
+                <p class="message-intro">Dear Residents,</p>
+                <p class="message-body">
+                    If enough of us contact our elected officials regarding concerns about how our lake is being managed—such as the
+                    sale of the water company to a California entity, drainage issues, and park closures including the dam walkway—we
+                    may be able to get some answers and drive positive change.
+                </p>
+                <p class="message-body">
+                    Please take a few minutes of your time to reach out and share your concerns with the following elected officials:
+                </p>
+                <ul class="officials-list">
+                    <li><strong>Chip Roy</strong><br><a href="tel:202-225-4236">202-225-4236</a></li>
+                    <li><strong>John Cornyn</strong><br><a href="tel:202-224-2934">202-224-2934</a></li>
+                    <li><strong>Ted Cruz</strong><br><a href="tel:202-224-5922">202-224-5922</a></li>
+                    <li><strong>Donna Campbell</strong><br><a href="tel:512-463-0125">512-463-0125</a></li>
+                    <li><strong>Greg Abbott</strong><br><a href="tel:512-463-2000">512-463-2000</a></li>
+                </ul>
+                <p class="message-footer">
+                    Your participation can make a difference for our community and the future of Canyon Lake.
+                </p>
+                <div style="text-align: center; margin-top: 25px;">
+                    <a href="/community-info" class="learn-more-btn">To Learn More</a>
+                </div>
+            </div>
         </div>
-        
+
         <div id="error" class="error" style="display: none;">
             Unable to load historical data. Please try again later.
         </div>
+
+        <footer class="site-footer">
+            <div class="footer-links">
+                <a href="/about">About</a>
+                <a href="/contact">Contact</a>
+                <a href="/privacy">Privacy Policy</a>
+                <a href="https://waterservices.usgs.gov/" target="_blank" rel="noopener noreferrer">USGS Data Source</a>
+            </div>
+            <div class="footer-info">
+                Data from U.S. Geological Survey and National Weather Service<br>
+                Created by Richard Hasting • Canyon Lake, Texas<br>
+                <small>This is a free community service. Not affiliated with USACE or USGS.</small>
+            </div>
+        </footer>
     </div>
-    
+
     <script>
         let chart = null;
         

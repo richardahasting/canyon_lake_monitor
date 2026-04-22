@@ -204,15 +204,24 @@
     }
     </script>
 
+    <!-- Google Fonts: Fraunces (display, variable) + Inter (body) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,400..900,0..100;1,9..144,400..900,0..100&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
     <div class="container">
-        <h1 style="font-size: 24pt; margin-bottom: 10px;">Is Canyon Lake full yet?</h1>
-        <div id="answer" style="font-size: 30pt; font-weight: bold; text-align: center; margin-bottom: 30px;">-</div>
-        
-        <div id="loading" class="loading">Loading lake data...</div>
-        
+        <header class="hero">
+            <div class="hero-eyebrow">Canyon Lake, Texas</div>
+            <h1 class="hero-question">Is the lake full yet?</h1>
+            <div id="answer" class="hero-answer is-loading">—</div>
+            <p id="hero-context" class="hero-context">Checking the latest from USGS…</p>
+        </header>
+
+        <div id="loading" class="loading">Gathering lake data…</div>
+
         <div id="content" style="display: none;">
             <div class="lake-container">
                 <div class="gauge">
@@ -230,6 +239,16 @@
                 </div>
                 <div class="lake-visual">
                     <div id="water" class="water">
+                        <!-- Parallax wave layers. Each path tiles twice (0→1200 and 1200→2400)
+                             so translating by -1200 loops seamlessly. -->
+                        <svg class="water-waves" viewBox="0 0 1200 36" preserveAspectRatio="none" aria-hidden="true">
+                            <path class="wave wave-back"
+                                  d="M0,20 C150,32 350,8 600,20 C850,32 1050,8 1200,20 C1350,32 1550,8 1800,20 C2050,32 2250,8 2400,20 L2400,36 L0,36 Z"/>
+                            <path class="wave wave-mid"
+                                  d="M0,22 C200,10 400,34 600,22 C800,10 1000,34 1200,22 C1400,10 1600,34 1800,22 C2000,10 2200,34 2400,22 L2400,36 L0,36 Z"/>
+                            <path class="wave wave-front"
+                                  d="M0,25 C120,34 280,14 600,25 C920,34 1080,14 1200,25 C1320,34 1480,14 1800,25 C2120,34 2280,14 2400,25 L2400,36 L0,36 Z"/>
+                        </svg>
                         <span class="percentage" id="percentage">0%</span>
                     </div>
                 </div>
@@ -275,13 +294,53 @@
                 <a href="/analytics" class="nav-link" style="margin-left: 10px;">View Site Analytics</a>
                 {% endif %}
             </div>
+
+            <div class="community-message">
+                <h2>🏞️ Community Action Needed</h2>
+                <p class="message-intro">Dear Residents,</p>
+                <p class="message-body">
+                    If enough of us contact our elected officials regarding concerns about how our lake is being managed—such as the
+                    sale of the water company to a California entity, drainage issues, and park closures including the dam walkway—we
+                    may be able to get some answers and drive positive change.
+                </p>
+                <p class="message-body">
+                    Please take a few minutes of your time to reach out and share your concerns with the following elected officials:
+                </p>
+                <ul class="officials-list">
+                    <li><strong>Chip Roy</strong><br><a href="tel:202-225-4236">202-225-4236</a></li>
+                    <li><strong>John Cornyn</strong><br><a href="tel:202-224-2934">202-224-2934</a></li>
+                    <li><strong>Ted Cruz</strong><br><a href="tel:202-224-5922">202-224-5922</a></li>
+                    <li><strong>Donna Campbell</strong><br><a href="tel:512-463-0125">512-463-0125</a></li>
+                    <li><strong>Greg Abbott</strong><br><a href="tel:512-463-2000">512-463-2000</a></li>
+                </ul>
+                <p class="message-footer">
+                    Your participation can make a difference for our community and the future of Canyon Lake.
+                </p>
+                <div style="text-align: center; margin-top: 25px;">
+                    <a href="/community-info" class="learn-more-btn">To Learn More</a>
+                </div>
+            </div>
         </div>
-        
+
         <div id="error" class="error" style="display: none;">
             Unable to load lake data. Please try again later.
         </div>
+
+        <footer class="site-footer">
+            <div class="footer-links">
+                <a href="/about">About</a>
+                <a href="/contact">Contact</a>
+                <a href="/privacy">Privacy Policy</a>
+                <a href="https://waterservices.usgs.gov/" target="_blank" rel="noopener noreferrer">USGS Data Source</a>
+            </div>
+            <div class="footer-info">
+                Data from U.S. Geological Survey and National Weather Service<br>
+                Created by Richard Hasting • Canyon Lake, Texas<br>
+                <small>This is a free community service. Not affiliated with USACE or USGS.</small>
+            </div>
+        </footer>
     </div>
-    
+
     <script>
         async function fetchLakeData() {
             try {
@@ -338,65 +397,78 @@
             }
         }
         
+        /*  ---------------------------------------------------------------
+            LAKE-LEVEL MESSAGES  —  YOUR VOICE GOES HERE
+
+            For each tier below, fill in two strings:
+              hero   — the BIG answer (short, punchy: "YES!", "NOPE.", etc.)
+              status — the sentence under the gauge (a little more context)
+
+            Tiers are checked top to bottom; the first `minPct` match wins.
+            Tone maps to the hero-answer color (yes/nope/low/flood).
+            --------------------------------------------------------------- */
+        const LAKE_TIERS = [
+            { minPct: 105, tone: 'flood', hero: 'WHOA!',     status: "Over flood stage. Mind the low crossings, y'all." },
+            { minPct: 100, tone: 'yes',   hero: 'YES!',      status: "Spilling over the top — doesn't get fuller than this." },
+            { minPct:  98, tone: 'yes',   hero: 'YES!',      status: "She's full, and that's a beautiful thing." },
+            { minPct:  90, tone: 'yes',   hero: 'YEP!',      status: "Lookin' mighty fine — near full and steady." },
+            { minPct:  75, tone: 'nope',  hero: 'NOPE!',     status: "A little below comfy, but nothing to fret over yet." },
+            { minPct:  60, tone: 'nope',  hero: 'NOPE!',     status: "Down noticeably — good time to ease off the sprinklers." },
+            { minPct:   0, tone: 'low',   hero: "DRYIN' UP", status: "Critically low. Please conserve what you can." }
+        ];
+
+        function pickTier(pct) {
+            return LAKE_TIERS.find(t => pct >= t.minPct) || LAKE_TIERS[LAKE_TIERS.length - 1];
+        }
+
+        function setHeroContext(pct, elevationFt) {
+            const el = document.getElementById('hero-context');
+            el.textContent = '';
+            const pctStrong = document.createElement('strong');
+            pctStrong.textContent = pct.toFixed(1) + '%';
+            const elStrong = document.createElement('strong');
+            elStrong.textContent = elevationFt.toFixed(2) + ' ft';
+            el.append('Currently ', pctStrong, ' of conservation pool · ', elStrong, ' elevation');
+        }
+
         function updateDisplay(data) {
             // Hide loading, show content
             document.getElementById('loading').style.display = 'none';
             document.getElementById('content').style.display = 'block';
             document.getElementById('error').style.display = 'none';
-            
-            // Update answer based on percentage
+
+            const pct = data.percentage_full;
+            const tier = pickTier(pct);
+
+            // Update the hero answer
             const answer = document.getElementById('answer');
-            if (data.percentage_full >= 105) {
-                answer.textContent = 'Maybe a bit too much?';
-            } else if (data.percentage_full >= 98) {
-                answer.textContent = 'YES!';
-            } else {
-                answer.textContent = 'NOPE!';
-            }
-            
-            // Update water level visual
+            answer.textContent = tier.hero;
+            answer.className = 'hero-answer tone-' + tier.tone;
+
+            // Update the context line under the hero
+            setHeroContext(pct, data.elevation);
+
+            // Update water level visual (cap visually at 100% so it doesn't overflow the vessel)
             const water = document.getElementById('water');
-            water.style.height = data.percentage_full + '%';
+            water.style.height = Math.min(pct, 100) + '%';
             water.className = 'water ' + data.status_category;
-            
+
             // Update percentage
-            document.getElementById('percentage').textContent = data.percentage_full + '%';
-            
+            document.getElementById('percentage').textContent = pct.toFixed(0) + '%';
+
             // Update stats
             document.getElementById('elevation').textContent = data.elevation.toFixed(2) + ' ft';
             document.getElementById('conservation').textContent = data.conservation_pool.toFixed(2) + ' ft';
             document.getElementById('below-normal').textContent = data.feet_below_conservation.toFixed(2) + ' ft';
-            
+
             // Update status message
             const statusMessage = document.getElementById('status-message');
             statusMessage.className = 'status-message ' + data.status_category;
-            
-            let message = '';
-            switch(data.status_category) {
-                case 'flood':
-                    message = 'WARNING: Lake is above flood stage!';
-                    break;
-                case 'full':
-                    message = 'Lake is at full conservation capacity.';
-                    break;
-                case 'excellent':
-                    message = 'Lake levels are excellent!';
-                    break;
-                case 'good':
-                    message = 'Lake levels are good.';
-                    break;
-                case 'low':
-                    message = 'Lake levels are low. Please conserve water.';
-                    break;
-                case 'critical':
-                    message = 'Lake levels are critically low. Please conserve water.';
-                    break;
-            }
-            statusMessage.textContent = message;
-            
+            statusMessage.textContent = tier.status;
+
             // Update last updated time
             const lastUpdated = new Date(data.timestamp);
-            document.getElementById('last-updated').textContent = 
+            document.getElementById('last-updated').textContent =
                 'Last updated: ' + lastUpdated.toLocaleString();
         }
         

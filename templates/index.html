@@ -266,7 +266,7 @@
                     <div class="stat-value" id="conservation">-</div>
                 </div>
                 <div class="stat-box">
-                    <div class="stat-label">Below Full</div>
+                    <div class="stat-label" id="below-normal-label">Below Full</div>
                     <div class="stat-value" id="below-normal">-</div>
                 </div>
             </div>
@@ -459,7 +459,14 @@
             // Update stats
             document.getElementById('elevation').textContent = data.elevation.toFixed(2) + ' ft';
             document.getElementById('conservation').textContent = data.conservation_pool.toFixed(2) + ' ft';
-            document.getElementById('below-normal').textContent = data.feet_below_conservation.toFixed(2) + ' ft';
+            // feet_below_conservation is 909 minus elevation: negative when the
+            // lake sits above the conservation pool. Show the magnitude and let
+            // the label say which side of full we're on (issue #17).
+            const feetFromFull = data.feet_below_conservation;
+            document.getElementById('below-normal-label').textContent =
+                feetFromFull <= 0 ? 'Above Full' : 'Below Full';
+            document.getElementById('below-normal').textContent =
+                Math.abs(feetFromFull).toFixed(2) + ' ft';
 
             // Update status message
             const statusMessage = document.getElementById('status-message');

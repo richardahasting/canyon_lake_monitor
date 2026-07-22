@@ -42,10 +42,16 @@
 </head>
 <body>
     <div class="chart-container">
-        <h1 style="font-size: 2em; margin-bottom: 20px;">Canyon Lake 30-Day History</h1>
-        
+        <h1 id="page-title" style="font-size: 2em; margin-bottom: 20px;">Canyon Lake 30-Day History</h1>
+
+        <div class="range-selector">
+            <button type="button" class="range-btn active" data-days="30">30 Days</button>
+            <button type="button" class="range-btn" data-days="90">90 Days</button>
+            <button type="button" class="range-btn" data-days="365">1 Year</button>
+        </div>
+
         <div id="loading" class="loading">Loading historical data...</div>
-        
+
         <div id="content" style="display: none;">
             <div class="chart-wrapper">
                 <canvas id="chart"></canvas>
@@ -53,15 +59,15 @@
             
             <div class="stats" style="margin-top: 30px;">
                 <div class="stat-box">
-                    <div class="stat-label">30-Day High</div>
+                    <div class="stat-label" id="high-label">30-Day High</div>
                     <div class="stat-value" id="high">-</div>
                 </div>
                 <div class="stat-box">
-                    <div class="stat-label">30-Day Low</div>
+                    <div class="stat-label" id="low-label">30-Day Low</div>
                     <div class="stat-value" id="low">-</div>
                 </div>
                 <div class="stat-box">
-                    <div class="stat-label">30-Day Average</div>
+                    <div class="stat-label" id="average-label">30-Day Average</div>
                     <div class="stat-value" id="average">-</div>
                 </div>
             </div>
@@ -121,18 +127,30 @@
 
     <script>
         let chart = null;
-        
-        async function fetchHistoricalData() {
+        let currentDays = 30;
+        const RANGE_LABEL = { 30: '30-Day', 90: '90-Day', 365: '1-Year' };
+
+        async function fetchHistoricalData(days = currentDays) {
+            currentDays = days;
+            document.querySelectorAll('.range-btn').forEach(btn =>
+                btn.classList.toggle('active', Number(btn.dataset.days) === days));
+            document.getElementById('page-title').textContent =
+                `Canyon Lake ${RANGE_LABEL[days].replace('-', ' ')} History`;
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('content').style.display = 'none';
+            document.getElementById('error').style.display = 'none';
             try {
-                // Fetch both lake data and 12-hour flow data
+                // Fetch both lake data and 12-hour flow data. The flow series
+                // is capped at 90 days server-side (USGS iv data volume), so
+                // on the 1-year view the flow line covers the recent quarter.
                 const [lakeResponse, flowResponse] = await Promise.all([
-                    fetch('/api/history'),
-                    fetch('/api/flow-12hr')
+                    fetch(`/api/history?days=${days}`),
+                    fetch(`/api/flow-12hr?days=${days}`)
                 ]);
-                
+
                 const lakeData = await lakeResponse.json();
                 const flowData = await flowResponse.json();
-                
+
                 if (lakeData.status === 'success' && flowData.status === 'success') {
                     displayChart(lakeData.data, flowData.data);
                 } else {
@@ -143,6 +161,10 @@
                 showError();
             }
         }
+
+        document.querySelectorAll('.range-btn').forEach(btn =>
+            btn.addEventListener('click', () =>
+                fetchHistoricalData(Number(btn.dataset.days))));
         
         function displayChart(lakeData, flowData) {
             // Hide loading, show content
@@ -156,7 +178,11 @@
             const high = Math.max(...percentages);
             const low = Math.min(...percentages);
             const average = percentages.reduce((a, b) => a + b, 0) / percentages.length;
-            
+
+            const rangeLabel = RANGE_LABEL[currentDays];
+            document.getElementById('high-label').textContent = rangeLabel + ' High';
+            document.getElementById('low-label').textContent = rangeLabel + ' Low';
+            document.getElementById('average-label').textContent = rangeLabel + ' Average';
             document.getElementById('high').textContent = high.toFixed(1) + '%';
             document.getElementById('low').textContent = low.toFixed(1) + '%';
             document.getElementById('average').textContent = average.toFixed(1) + '%';
@@ -245,9 +271,10 @@
                         x: {
                             type: 'time',
                             time: {
-                                unit: 'day',
+                                unit: currentDays > 90 ? 'month' : 'day',
                                 displayFormats: {
-                                    day: 'MMM d'
+                                    day: 'MMM d',
+                                    month: 'MMM yyyy'
                                 }
                             },
                             title: {
@@ -345,6 +372,7 @@
         // Fetch data on load
         fetchHistoricalData();
     </script>
-    {% include '_feedback.html' %}
+    <script type="module" src="https://feedback.hastingtx.org/kit/v1/feedback.js"></script>
+    <hasting-feedback app="canyon-lake"></hasting-feedback>
 </body>
 </html>

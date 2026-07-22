@@ -6,12 +6,8 @@ from bot_detector import detect_bot
 import os
 import json
 import threading
-import time
 from datetime import datetime, timedelta
 import ipaddress
-from dotenv import load_dotenv
-
-load_dotenv()
 
 # Configure logging: INFO+ to app.log, WARNING+ to stderr
 logging.basicConfig(
@@ -30,23 +26,6 @@ monitor = CanyonLakeMonitor()
 # Hit counter configuration
 HITS_FILE = 'hits.json'
 hits_lock = threading.Lock()
-
-# Feedback rate limiting: {ip: [submission_timestamps]}
-FEEDBACK_MAX_PER_HOUR = 3
-feedback_lock = threading.Lock()
-feedback_submissions = {}
-
-def feedback_rate_limited(ip_address):
-    """True if this IP has already submitted FEEDBACK_MAX_PER_HOUR in the last hour."""
-    now = time.time()
-    with feedback_lock:
-        recent = [t for t in feedback_submissions.get(ip_address, []) if now - t < 3600]
-        if len(recent) >= FEEDBACK_MAX_PER_HOUR:
-            feedback_submissions[ip_address] = recent
-            return True
-        recent.append(now)
-        feedback_submissions[ip_address] = recent
-        return False
 
 def client_ip():
     """Client IP, honoring X-Forwarded-For from the nginx proxy."""
@@ -172,14 +151,19 @@ def increment_hit_counter(route, ip_address, user_agent=None):
 @app.after_request
 def add_security_headers(response):
     """Add security headers to all responses"""
-    # Content Security Policy - allow inline scripts/styles for Chart.js and our site
+    # Content Security Policy - allow inline scripts/styles for Chart.js and
+    # our site; feedback.hastingtx.org hosts the shared feedback widget
+    # (script + submission endpoint); blob: lets its screenshot preview render;
+    # the Google Fonts pair is what the templates' <link> tags actually load.
     response.headers['Content-Security-Policy'] = (
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
-        "style-src 'self' 'unsafe-inline'; "
-        "img-src 'self' data: https:; "
-        "font-src 'self' data:; "
-        "connect-src 'self' https://waterservices.usgs.gov https://api.weather.gov; "
+        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net "
+        "https://feedback.hastingtx.org; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "img-src 'self' data: blob: https:; "
+        "font-src 'self' data: https://fonts.gstatic.com; "
+        "connect-src 'self' https://waterservices.usgs.gov https://api.weather.gov "
+        "https://feedback.hastingtx.org; "
         "frame-ancestors 'none';"
     )
     # Prevent clickjacking
@@ -263,9 +247,23 @@ def get_status():
     status = monitor.get_lake_status()
     return jsonify(status)
 
+# Chart ranges offered by /chart (issue #11). Restricting to a fixed set
+# keeps the USGS query load predictable and the parameter un-abusable.
+ALLOWED_HISTORY_DAYS = {30, 90, 365}
+# The instantaneous-values (iv) flow endpoint returns ~96 readings/day, so a
+# year would be ~35k points per request; cap the flow series at 90 days.
+MAX_FLOW_DAYS = 90
+
+def requested_days(default=30):
+    try:
+        days = int(request.args.get('days', default))
+    except (TypeError, ValueError):
+        return default
+    return days if days in ALLOWED_HISTORY_DAYS else default
+
 @app.route('/api/history')
 def get_history():
-    historical_data = monitor.fetch_historical_data(30)
+    historical_data = monitor.fetch_historical_data(requested_days())
     if historical_data:
         return jsonify({
             'status': 'success',
@@ -279,7 +277,7 @@ def get_history():
 
 @app.route('/api/flow-12hr')
 def get_flow_12hr():
-    flow_data = monitor.fetch_river_flow_12hr(30)
+    flow_data = monitor.fetch_river_flow_12hr(min(requested_days(), MAX_FLOW_DAYS))
     if flow_data:
         return jsonify({
             'status': 'success',
@@ -411,59 +409,6 @@ def get_environment():
     """Get environmental data: weather, moon phase, and day/night status"""
     env_data = monitor.get_environment_data()
     return jsonify(env_data)
-
-@app.route('/api/feedback', methods=['POST'])
-def submit_feedback():
-    """
-    Accept visitor feedback and route it via feedback.py
-    (bugs/suggestions -> GitHub issue, everything else -> email).
-
-    The site is anonymous, so this endpoint defends itself:
-    honeypot field, bot User-Agent screening, and a per-IP rate limit.
-    Bots and honeypot hits get a fake success so they don't probe further.
-    """
-    import feedback as fb
-
-    ip_address = client_ip()
-    user_agent = request.headers.get('User-Agent', '')
-
-    # Honeypot: real users never see or fill the 'website' field
-    if request.form.get('website', '').strip():
-        logger.info("Feedback honeypot triggered from %s", ip_address)
-        return jsonify({'ok': True, 'action': 'email'})
-
-    bot_info = detect_bot(user_agent) if user_agent else {'is_bot': True}
-    if bot_info.get('is_bot'):
-        logger.info("Feedback from bot UA rejected: %s (%s)", ip_address, user_agent)
-        return jsonify({'ok': True, 'action': 'email'})
-
-    text = request.form.get('feedback_text', '').strip()
-    if len(text) < 10:
-        return jsonify({'ok': False,
-                        'error': 'Please describe your feedback (at least 10 characters).'}), 400
-    if len(text) > 4000:
-        return jsonify({'ok': False,
-                        'error': 'Feedback must be 4000 characters or fewer.'}), 400
-
-    name = request.form.get('name', '').strip()[:100]
-    email = request.form.get('email', '').strip()[:200]
-    if email and '@' not in email:
-        return jsonify({'ok': False, 'error': 'That email address does not look right.'}), 400
-    page = request.form.get('page', '').strip()[:200]
-
-    # Rate-limit only submissions that passed validation, so a visitor who
-    # trips the length checks a few times isn't locked out for an hour.
-    if feedback_rate_limited(ip_address):
-        return jsonify({'ok': False,
-                        'error': 'Too many submissions. Please try again later.'}), 429
-
-    logger.info("Feedback submission from %s (page=%s, %d chars)",
-                ip_address, page, len(text))
-    ok, action, github_url = fb.process_feedback(name, email, text, page)
-    if not ok:
-        return jsonify({'ok': False,
-                        'error': 'Could not deliver your feedback. Please try again.'}), 500
-    return jsonify({'ok': True, 'action': action, 'github_url': github_url})
 
 @app.route('/robots.txt')
 def robots_txt():

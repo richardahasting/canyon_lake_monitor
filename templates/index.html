@@ -404,12 +404,17 @@
               hero   — the BIG answer (short, punchy: "YES!", "NOPE.", etc.)
               status — the sentence under the gauge (a little more context)
 
-            Tiers are checked top to bottom; the first `minPct` match wins.
+            Tiers are checked top to bottom; the first match wins. A tier
+            keyed on `minElev` compares the lake elevation in feet; `minPct`
+            compares percentage of conservation pool. The flood tier MUST
+            use elevation — 100% of conservation pool is 909 ft, but the
+            spillway/flood pool is 943 ft, so percentages can't detect
+            flooding (issues #19/#20).
             Tone maps to the hero-answer color (yes/nope/low/flood).
             --------------------------------------------------------------- */
         const LAKE_TIERS = [
-            { minPct: 105, tone: 'flood', hero: 'WHOA!',     status: "Over flood stage. Mind the low crossings, y'all." },
-            { minPct: 100, tone: 'yes',   hero: 'YES!',      status: "Spilling over the top — doesn't get fuller than this." },
+            { minElev: 943, tone: 'flood', hero: 'WHOA!',    status: "Over flood stage. Mind the low crossings, y'all." },
+            { minPct: 100, tone: 'yes',   hero: 'YES!',      status: "Above conservation pool." },
             { minPct:  98, tone: 'yes',   hero: 'YES!',      status: "She's full, and that's a beautiful thing." },
             { minPct:  90, tone: 'yes',   hero: 'YEP!',      status: "Lookin' mighty fine — near full and steady." },
             { minPct:  75, tone: 'nope',  hero: 'NOPE!',     status: "A little below comfy, but nothing to fret over yet." },
@@ -417,8 +422,10 @@
             { minPct:   0, tone: 'low',   hero: "DRYIN' UP", status: "Critically low. Please conserve what you can." }
         ];
 
-        function pickTier(pct) {
-            return LAKE_TIERS.find(t => pct >= t.minPct) || LAKE_TIERS[LAKE_TIERS.length - 1];
+        function pickTier(pct, elevationFt) {
+            return LAKE_TIERS.find(t =>
+                t.minElev !== undefined ? elevationFt >= t.minElev : pct >= t.minPct
+            ) || LAKE_TIERS[LAKE_TIERS.length - 1];
         }
 
         function setHeroContext(pct, elevationFt) {
@@ -438,7 +445,7 @@
             document.getElementById('error').style.display = 'none';
 
             const pct = data.percentage_full;
-            const tier = pickTier(pct);
+            const tier = pickTier(pct, data.elevation);
 
             // Update the hero answer
             const answer = document.getElementById('answer');

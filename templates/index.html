@@ -269,6 +269,10 @@
                     <div class="stat-label" id="below-normal-label">Below Full</div>
                     <div class="stat-value" id="below-normal">-</div>
                 </div>
+                <div class="stat-box">
+                    <div class="stat-label">Guadalupe River at Spring Branch</div>
+                    <div class="stat-value" id="river-flow">-</div>
+                </div>
             </div>
 
             <div class="stats" style="margin-top: 20px;">
@@ -474,6 +478,12 @@
                 feetFromFull <= 0 ? 'Above Full' : 'Below Full';
             document.getElementById('below-normal').textContent =
                 Math.abs(feetFromFull).toFixed(2) + ' ft';
+
+            // Guadalupe River flow at Spring Branch (issue #24). The backend
+            // returns null if the river gauge is down; show a dash, not "null".
+            document.getElementById('river-flow').textContent =
+                data.river_flow_cfs == null ? 'Unavailable'
+                    : Math.round(data.river_flow_cfs).toLocaleString() + ' cfs';
 
             // Update status message
             const statusMessage = document.getElementById('status-message');

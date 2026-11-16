@@ -73,6 +73,36 @@ class CanyonLakeMonitor:
                          (self.conservation_pool_elevation - empty_elevation)) * 100
             return round(percentage, 1)
     
+    def fetch_current_river_flow(self) -> Optional[Dict]:
+        """Latest Guadalupe River discharge at Spring Branch (USGS 08167500).
+
+        Returns {'cfs': float, 'timestamp': ISO-8601 str} or None. Failures are
+        swallowed (logged) so a river-gauge problem never breaks lake status.
+        """
+        params = {
+            'sites': self.guadalupe_site_id,
+            'parameterCd': '00060',  # Discharge, cubic feet per second
+            'format': 'json'
+        }
+        try:
+            response = requests.get(self.base_url, params=params, timeout=15)
+            response.raise_for_status()
+            for series in response.json()['value']['timeSeries']:
+                if series['variable']['variableCode'][0]['value'] != '00060':
+                    continue
+                values = series['values'][0]['value']
+                if not values:
+                    continue
+                latest = values[-1]
+                cfs = float(latest['value'])
+                # USGS reports -999999 when the sensor has no data
+                if cfs < 0:
+                    continue
+                return {'cfs': cfs, 'timestamp': latest['dateTime']}
+        except (requests.RequestException, KeyError, IndexError, ValueError) as e:
+            logger.warning("Failed to fetch Spring Branch river flow: %s", e)
+        return None
+
     def get_lake_status(self) -> Dict:
         """Get comprehensive lake status"""
         data = self.fetch_current_data()
@@ -107,9 +137,13 @@ class CanyonLakeMonitor:
         else:
             status_category = 'critical'
         
+        river = self.fetch_current_river_flow()
+
         return {
             'status': 'success',
             'timestamp': datetime.now().isoformat(),
+            'river_flow_cfs': river['cfs'] if river else None,
+            'river_flow_time': river['timestamp'] if river else None,
             'elevation': current_elevation,
             'percentage_full': percentage_full,
             'status_category': status_category,
